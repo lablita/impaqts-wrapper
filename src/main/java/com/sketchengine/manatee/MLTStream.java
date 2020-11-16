@@ -9,122 +9,127 @@
 package com.sketchengine.manatee;
 
 public class MLTStream {
-  private transient long swigCPtr;
-  protected transient boolean swigCMemOwn;
+	protected transient boolean swigCMemOwn;
+	private transient long swigCPtr;
 
-  protected MLTStream(long cPtr, boolean cMemoryOwn) {
-    swigCMemOwn = cMemoryOwn;
-    swigCPtr = cPtr;
-  }
+	protected MLTStream(long cPtr, boolean cMemoryOwn) {
+      this.swigCMemOwn = cMemoryOwn;
+      this.swigCPtr = cPtr;
+	}
 
-  protected static long getCPtr(MLTStream obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
-  }
+	protected static long getCPtr(MLTStream obj) {
+		return (obj == null) ? 0 : obj.swigCPtr;
+	}
 
-  @SuppressWarnings("deprecation")
-  protected void finalize() {
-    delete();
-  }
+	public long change_newsize() {
+		return manateeJNI.MLTStream_change_newsize(this.swigCPtr, this);
+	}
 
-  public synchronized void delete() {
-    if (swigCPtr != 0) {
-      if (swigCMemOwn) {
-        swigCMemOwn = false;
-        manateeJNI.delete_MLTStream(swigCPtr);
-      }
-      swigCPtr = 0;
-    }
-  }
+	public long change_size() {
+		return manateeJNI.MLTStream_change_size(this.swigCPtr, this);
+	}
 
-  public MLTStream.change_type_t change_type() {
-    return MLTStream.change_type_t.swigToEnum(manateeJNI.MLTStream_change_type(swigCPtr, this));
-  }
+	public change_type_t change_type() {
+		return change_type_t.swigToEnum(manateeJNI.MLTStream_change_type(this.swigCPtr, this));
+	}
 
-  public long change_size() {
-    return manateeJNI.MLTStream_change_size(swigCPtr, this);
-  }
+	public int concat_value(int attrn) {
+		return manateeJNI.MLTStream_concat_value(this.swigCPtr, this, attrn);
+	}
 
-  public long change_newsize() {
-    return manateeJNI.MLTStream_change_newsize(swigCPtr, this);
-  }
+	public synchronized void delete() {
+		if (this.swigCPtr != 0) {
+			if (this.swigCMemOwn) {
+              this.swigCMemOwn = false;
+				manateeJNI.delete_MLTStream(this.swigCPtr);
+			}
+          this.swigCPtr = 0;
+		}
+	}
 
-  public int concat_value(int attrn) {
-    return manateeJNI.MLTStream_concat_value(swigCPtr, this, attrn);
-  }
+	public boolean end() {
+		return manateeJNI.MLTStream_end(this.swigCPtr, this);
+	}
 
-  public long orgpos() {
-    return manateeJNI.MLTStream_orgpos(swigCPtr, this);
-  }
+	@Override
+    @SuppressWarnings("deprecation")
+	protected void finalize() {
+      this.delete();
+	}
 
-  public long newpos() {
-    return manateeJNI.MLTStream_newpos(swigCPtr, this);
-  }
+	public long find_new(long pos) {
+		return manateeJNI.MLTStream_find_new(this.swigCPtr, this, pos);
+	}
 
-  public boolean end() {
-    return manateeJNI.MLTStream_end(swigCPtr, this);
-  }
+	public long find_org(long pos) {
+		return manateeJNI.MLTStream_find_org(this.swigCPtr, this, pos);
+	}
 
-  public long newfinal() {
-    return manateeJNI.MLTStream_newfinal(swigCPtr, this);
-  }
+	public long newfinal() {
+		return manateeJNI.MLTStream_newfinal(this.swigCPtr, this);
+	}
 
-  public void next() {
-    manateeJNI.MLTStream_next(swigCPtr, this);
-  }
+	public long newpos() {
+		return manateeJNI.MLTStream_newpos(this.swigCPtr, this);
+	}
 
-  public long find_org(long pos) {
-    return manateeJNI.MLTStream_find_org(swigCPtr, this, pos);
-  }
+	public void next() {
+		manateeJNI.MLTStream_next(this.swigCPtr, this);
+	}
 
-  public long find_new(long pos) {
-    return manateeJNI.MLTStream_find_new(swigCPtr, this, pos);
-  }
+	public long orgpos() {
+		return manateeJNI.MLTStream_orgpos(this.swigCPtr, this);
+	}
 
-  public final static class change_type_t {
-    public final static MLTStream.change_type_t KEEP = new MLTStream.change_type_t("KEEP", manateeJNI.MLTStream_KEEP_get());
-    public final static MLTStream.change_type_t CONCAT = new MLTStream.change_type_t("CONCAT", manateeJNI.MLTStream_CONCAT_get());
-    public final static MLTStream.change_type_t DELETE = new MLTStream.change_type_t("DELETE", manateeJNI.MLTStream_DELETE_get());
-    public final static MLTStream.change_type_t INSERT = new MLTStream.change_type_t("INSERT", manateeJNI.MLTStream_INSERT_get());
-    public final static MLTStream.change_type_t MORPH = new MLTStream.change_type_t("MORPH", manateeJNI.MLTStream_MORPH_get());
+	public final static class change_type_t {
+		public final static change_type_t KEEP = new change_type_t("KEEP", manateeJNI.MLTStream_KEEP_get());
+		public final static change_type_t CONCAT = new change_type_t("CONCAT", manateeJNI.MLTStream_CONCAT_get());
+		public final static change_type_t DELETE = new change_type_t("DELETE", manateeJNI.MLTStream_DELETE_get());
+		public final static change_type_t INSERT = new change_type_t("INSERT", manateeJNI.MLTStream_INSERT_get());
+		public final static change_type_t MORPH = new change_type_t("MORPH", manateeJNI.MLTStream_MORPH_get());
+		private static final change_type_t[] swigValues = { change_type_t.KEEP, change_type_t.CONCAT,
+                change_type_t.DELETE, change_type_t.INSERT, change_type_t.MORPH };
+		private static int swigNext = 0;
+		private final int swigValue;
+		private final String swigName;
 
-    public final int swigValue() {
-      return swigValue;
-    }
+		private change_type_t(String swigName) {
+			this.swigName = swigName;
+			this.swigValue = change_type_t.swigNext++;
+		}
 
-    public String toString() {
-      return swigName;
-    }
+		private change_type_t(String swigName, int swigValue) {
+			this.swigName = swigName;
+			this.swigValue = swigValue;
+          change_type_t.swigNext = swigValue + 1;
+		}
 
-    public static change_type_t swigToEnum(int swigValue) {
-      if (swigValue < swigValues.length && swigValue >= 0 && swigValues[swigValue].swigValue == swigValue)
-        return swigValues[swigValue];
-      for (int i = 0; i < swigValues.length; i++)
-        if (swigValues[i].swigValue == swigValue)
-          return swigValues[i];
-      throw new IllegalArgumentException("No enum " + change_type_t.class + " with value " + swigValue);
-    }
+		private change_type_t(String swigName, change_type_t swigEnum) {
+			this.swigName = swigName;
+			this.swigValue = swigEnum.swigValue;
+          change_type_t.swigNext = this.swigValue + 1;
+		}
 
-    private change_type_t(String swigName) {
-      this.swigName = swigName;
-      this.swigValue = swigNext++;
-    }
+		public static change_type_t swigToEnum(int swigValue) {
+			if (swigValue < change_type_t.swigValues.length && swigValue >= 0 && change_type_t.swigValues[swigValue].swigValue == swigValue) {
+              return change_type_t.swigValues[swigValue];
+            }
+			for (int i = 0; i < change_type_t.swigValues.length; i++) {
+              if (change_type_t.swigValues[i].swigValue == swigValue) {
+                return change_type_t.swigValues[i];
+              }
+            }
+			throw new IllegalArgumentException("No enum " + change_type_t.class + " with value " + swigValue);
+		}
 
-    private change_type_t(String swigName, int swigValue) {
-      this.swigName = swigName;
-      this.swigValue = swigValue;
-      swigNext = swigValue+1;
-    }
+		public final int swigValue() {
+			return this.swigValue;
+		}
 
-    private change_type_t(String swigName, change_type_t swigEnum) {
-      this.swigName = swigName;
-      this.swigValue = swigEnum.swigValue;
-      swigNext = this.swigValue+1;
-    }
-
-    private static change_type_t[] swigValues = { KEEP, CONCAT, DELETE, INSERT, MORPH };
-    private static int swigNext = 0;
-    private final int swigValue;
-    private final String swigName;
-  }
+		@Override
+        public String toString() {
+			return this.swigName;
+		}
+	}
 
 }
