@@ -1,6 +1,5 @@
 package it.drwolf.impaqts.wrapper.executor;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sketchengine.manatee.Concordance;
 import com.sketchengine.manatee.Corpus;
@@ -22,7 +21,7 @@ public class QueryExecutor {
 		this.objectMapper = new ObjectMapper();
 	}
 
-	private void executeQuery(QueryRequest queryRequest, String corpusName) throws InterruptedException, IOException {
+	private void executeQuery(String corpusName, QueryRequest queryRequest) throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, queryRequest.getWord(), 0, 0);
@@ -68,25 +67,12 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
-	public void manageQueryRequest(String corpus, String json) {
+	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
-			QueryRequest qr = this.objectMapper.readValue(json, new TypeReference<QueryRequest>() {
-			});
-			this.executeQuery(qr, corpus);
+			this.executeQuery(corpus, queryRequest);
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void manageQueryRequest(String corpus, String cql, Integer start, Integer end) {
-		QueryRequest qr = new QueryRequest();
-		qr.setWord(cql);
-		qr.setStart(start);
-		qr.setEnd(end);
-		try {
-			this.executeQuery(qr, corpus);
-		} catch (InterruptedException | IOException e) {
-			e.printStackTrace();
-		}
-	}
 }

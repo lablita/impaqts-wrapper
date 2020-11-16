@@ -1,5 +1,9 @@
 package it.drwolf.impaqts.wrapper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.executor.QueryExecutor;
 import picocli.CommandLine;
 
@@ -11,6 +15,7 @@ import java.util.concurrent.Callable;
 public class MainWrapper implements Callable<Integer> {
 
 	private static final String MANATEE_REGISTRY = "MANATEE_REGISTRY";
+	private final ObjectMapper objectMapper;
 
 	@CommandLine.Option(names = { "-c", "--corpus" },
 			required = true,
@@ -32,9 +37,16 @@ public class MainWrapper implements Callable<Integer> {
 	@CommandLine.Option(names = { "-j", "--json" },
 			description = "Query request in json format")
 	String json;
+	@CommandLine.Option(names = { "-m", "--corpusmetadata" },
+			description = "Retrieve corpus metadata")
+	String corpusMetadata;
 
 	@CommandLine.Spec
 	CommandLine.Model.CommandSpec spec;
+
+	public MainWrapper() {
+		this.objectMapper = new ObjectMapper();
+	}
 
 	public static void main(String... args) {
 		System.exit(new CommandLine(new MainWrapper()).execute(args));
@@ -46,11 +58,23 @@ public class MainWrapper implements Callable<Integer> {
 		this.loadJNI();
 		this.validate();
 		QueryExecutor queryExecutor = new QueryExecutor();
+		QueryRequest qr = new QueryRequest();
 		if (this.json != null) {
-			queryExecutor.manageQueryRequest(this.corpus, this.json);
+			try {
+				qr = this.objectMapper.readValue(this.json, new TypeReference<QueryRequest>() {
+				});
+			} catch (JsonProcessingException e) {
+				System.err.println("Bad format for json request");
+				System.exit(1);
+			}
+		} else if (this.corpusMetadata != null) {
+			qr.setCorpusmetadata(Boolean.TRUE);
 		} else {
-			queryExecutor.manageQueryRequest(this.corpus, this.cql, this.start, this.end);
+			qr.setStart(this.start);
+			qr.setEnd(this.end);
+			qr.setWord(this.cql);
 		}
+		queryExecutor.manageQueryRequest(this.corpus, qr);
 		return 0;
 	}
 
@@ -80,10 +104,11 @@ public class MainWrapper implements Callable<Integer> {
 	}
 
 	private void validate() {
-		if (this.json == null || this.json.isEmpty()) {
+		if (this.json == null || this.json.isEmpty() && (this.corpusMetadata == null
+				|| this.corpusMetadata.isEmpty())) {
 			if (this.start == null || this.end == null || this.cql == null) {
 				throw new CommandLine.ParameterException(this.spec.commandLine(),
-						"If you don't specify a '--json' option, then you must specify '--start', '--end' and '--cql' option.");
+						"If you don't specify a '--json' option or a '--corpusmetadata' option, then you must specify '--start', '--end' and '--cql' option.");
 			}
 		}
 	}
