@@ -69,10 +69,17 @@ public class QueryExecutor {
 
 	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
-			this.executeQuery(corpus, queryRequest);
+			if (Boolean.TRUE.equals(queryRequest.getCorpusmetadata())) {
+				this.retrieveMetadata(corpus);
+			} else {
+				this.executeQuery(corpus, queryRequest);
+			}
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void retrieveMetadata(String corpus) {
 	}
 
 }
