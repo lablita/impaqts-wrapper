@@ -1,13 +1,13 @@
 package it.drwolf.impaqts.wrapper.dto;
 
 public class QueryRequest {
-	private Boolean corpusmetadata = Boolean.FALSE;
+	private String corpusMetadata;
 	private Integer start = 0;
 	private Integer end = 0;
 	private String word;
 
-	public Boolean getCorpusmetadata() {
-		return this.corpusmetadata;
+	public String getCorpusMetadata() {
+		return this.corpusMetadata;
 	}
 
 	public Integer getEnd() {
@@ -22,8 +22,8 @@ public class QueryRequest {
 		return this.word;
 	}
 
-	public void setCorpusmetadata(Boolean corpusmetadata) {
-		this.corpusmetadata = corpusmetadata;
+	public void setCorpusMetadata(String corpusMetadata) {
+		this.corpusMetadata = corpusMetadata;
 	}
 
 	public void setEnd(Integer end) {

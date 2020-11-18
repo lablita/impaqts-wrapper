@@ -38,7 +38,7 @@ public class MainWrapper implements Callable<Integer> {
 			description = "Query request in json format")
 	String json;
 	@CommandLine.Option(names = { "-m", "--corpusmetadata" },
-			description = "Retrieve corpus metadata")
+			description = "Retrieve corpus metadata. Specify first or second level attribute (eg. doc.file)")
 	String corpusMetadata;
 
 	@CommandLine.Spec
@@ -67,8 +67,8 @@ public class MainWrapper implements Callable<Integer> {
 				System.err.println("Bad format for json request");
 				System.exit(1);
 			}
-		} else if (this.corpusMetadata != null) {
-			qr.setCorpusmetadata(Boolean.TRUE);
+		} else if (this.corpusMetadata != null && !this.corpusMetadata.isEmpty()) {
+			qr.setCorpusMetadata(this.corpusMetadata);
 		} else {
 			qr.setStart(this.start);
 			qr.setEnd(this.end);
@@ -104,7 +104,7 @@ public class MainWrapper implements Callable<Integer> {
 	}
 
 	private void validate() {
-		if (this.json == null || this.json.isEmpty() && (this.corpusMetadata == null
+		if ((this.json == null || this.json.isEmpty()) && (this.corpusMetadata == null
 				|| this.corpusMetadata.isEmpty())) {
 			if (this.start == null || this.end == null || this.cql == null) {
 				throw new CommandLine.ParameterException(this.spec.commandLine(),

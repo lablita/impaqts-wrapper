@@ -1,9 +1,11 @@
 package it.drwolf.impaqts.wrapper.executor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sketchengine.manatee.Concordance;
 import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.KWICLines;
+import com.sketchengine.manatee.PosAttr;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
@@ -14,6 +16,10 @@ import java.util.List;
 
 public class QueryExecutor {
 
+	public static final String STRUCTATTRLIST = "STRUCTATTRLIST";
+	public static final String ATTRLIST = "ATTRLIST";
+	public static final String STRUCTLIST = "STRUCTLIST";
+	public static final String DOCSTRUCTURE = "DOCSTRUCTURE";
 	private static final Integer MINIMUM_EXECUTION_TIME = 100;
 	private final ObjectMapper objectMapper;
 
@@ -69,8 +75,8 @@ public class QueryExecutor {
 
 	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
-			if (Boolean.TRUE.equals(queryRequest.getCorpusmetadata())) {
-				this.retrieveMetadata(corpus);
+			if (queryRequest.getCorpusMetadata() != null && !queryRequest.getCorpusMetadata().isEmpty()) {
+				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadata());
 			} else {
 				this.executeQuery(corpus, queryRequest);
 			}
@@ -79,7 +85,18 @@ public class QueryExecutor {
 		}
 	}
 
-	private void retrieveMetadata(String corpus) {
+	private void retrieveMetadata(String corpusName, String attribute) throws JsonProcessingException {
+		final Corpus corpus = new Corpus(corpusName);
+		PosAttr posAttr = corpus.get_attr(attribute);
+		final int posAttrRange = posAttr.id_range();
+		QueryResponse queryResponse = new QueryResponse();
+		for (int i = 0; i < posAttrRange; i++) {
+			if (posAttr.freq(i) > 0) {
+				queryResponse.getMetadataValues().add(posAttr.id2str(i));
+			}
+		}
+		queryResponse.setCurrentSize(queryResponse.getMetadataValues().size());
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 	}
 
 }
