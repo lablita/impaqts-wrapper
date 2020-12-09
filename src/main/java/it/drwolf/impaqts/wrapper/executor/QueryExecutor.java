@@ -75,8 +75,8 @@ public class QueryExecutor {
 
 	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
-			if (queryRequest.getCorpusMetadata() != null && !queryRequest.getCorpusMetadata().isEmpty()) {
-				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadata());
+			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
+				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
 				this.executeQuery(corpus, queryRequest);
 			}

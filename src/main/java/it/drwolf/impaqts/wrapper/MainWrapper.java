@@ -68,7 +68,7 @@ public class MainWrapper implements Callable<Integer> {
 				System.exit(1);
 			}
 		} else if (this.corpusMetadata != null && !this.corpusMetadata.isEmpty()) {
-			qr.setCorpusMetadata(this.corpusMetadata);
+			qr.setCorpusMetadatum(this.corpusMetadata);
 		} else {
 			qr.setStart(this.start);
 			qr.setEnd(this.end);
