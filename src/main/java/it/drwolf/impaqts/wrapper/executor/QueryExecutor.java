@@ -6,6 +6,9 @@ import com.sketchengine.manatee.Concordance;
 import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.KWICLines;
 import com.sketchengine.manatee.PosAttr;
+import it.drwolf.impaqts.wrapper.query.QueryPattern;
+import it.drwolf.impaqts.wrapper.query.QueryStructure;
+import it.drwolf.impaqts.wrapper.query.QueryTag;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
@@ -27,12 +30,13 @@ public class QueryExecutor {
 		this.objectMapper = new ObjectMapper();
 	}
 
-	private void executeQuery(String corpusName, QueryRequest queryRequest) throws InterruptedException, IOException {
+	// corpusName, CQL, start, end
+	private void executeQuery(String corpusName, String cql, int start, int end) throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final Concordance concordance = new Concordance();
-		concordance.load_from_query(corpus, queryRequest.getWord(), 0, 0);
+		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int count = 0;
-		int requestedSize = queryRequest.getEnd() - queryRequest.getStart();
+		int requestedSize = end - start;
 		long now = System.currentTimeMillis();
 		List<KWICLine> sentKwicLines = new ArrayList<>();
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
@@ -49,8 +53,8 @@ public class QueryExecutor {
 			if (maxLine > count) {
 				maxLine = count;
 			}
-			KWICLines kl = new KWICLines(corpus, concordance.RS(false, queryRequest.getStart(), queryRequest.getEnd()),
-					"15#", "15#", "word", "word", "s", "#", 100);
+			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end),
+					"50#", "50#", "word", "word", "s", "#", 100);
 			for (int linenum = 0; linenum < maxLine; linenum++) {
 				if (!kl.nextline()) {
 					break;
@@ -64,7 +68,7 @@ public class QueryExecutor {
 				sentKwicLines.addAll(kwicLines);
 			}
 			queryResponse.setInProgress(!concordance.finished());
-			System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+			System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
 			Thread.sleep(5);
 			System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
 					(System.currentTimeMillis() - now)));
@@ -73,18 +77,21 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
+	// chiamata a metodo getCQLfromqueryrequest che trasforma i dati di input in stringa cql
 	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
-				this.executeQuery(corpus, queryRequest);
+				System.out.println("*** CQL *** " + getCqlFromQueryRequest(queryRequest)); //debug
+				this.executeQuery(corpus, getCqlFromQueryRequest(queryRequest), queryRequest.getStart(), queryRequest.getEnd());
 			}
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 		}
 	}
 
+	// recupera valori dei metadati che sono sui singoli documenti
 	private void retrieveMetadata(String corpusName, String attribute) throws JsonProcessingException {
 		final Corpus corpus = new Corpus(corpusName);
 		PosAttr posAttr = corpus.get_attr(attribute);
@@ -97,6 +104,20 @@ public class QueryExecutor {
 		}
 		queryResponse.setCurrentSize(queryResponse.getMetadataValues().size());
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+	}
+
+	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
+		if (queryRequest.getQueryInCql()) {
+			return queryRequest.getCql();
+		}
+		QueryPattern qp = queryRequest.getQueryPattern();
+		if (qp != null) {
+			String cql = qp.getCql();
+			if (!cql.isEmpty()) {
+				return qp.getCql();
+			}
+		}
+		return "[]";
 	}
 
 }

@@ -64,6 +64,7 @@ public class MainWrapper implements Callable<Integer> {
 				qr = this.objectMapper.readValue(this.json, new TypeReference<QueryRequest>() {
 				});
 			} catch (JsonProcessingException e) {
+				e.printStackTrace();
 				System.err.println("Bad format for json request");
 				System.exit(1);
 			}
@@ -72,7 +73,7 @@ public class MainWrapper implements Callable<Integer> {
 		} else {
 			qr.setStart(this.start);
 			qr.setEnd(this.end);
-			qr.setWord(this.cql);
+			qr.setCql(this.cql);
 		}
 		queryExecutor.manageQueryRequest(this.corpus, qr);
 		return 0;

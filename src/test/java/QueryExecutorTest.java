@@ -54,7 +54,7 @@ public class QueryExecutorTest {
 	@Test
 	public void testNoResults() {
 		QueryRequest qr = new QueryRequest();
-		qr.setWord("[word=\"il\"]");
+		qr.setCql("[word=\"il\"]");
 		qr.setStart(0);
 		qr.setEnd(10);
 		QueryExecutor qe = new QueryExecutor();
@@ -82,7 +82,7 @@ public class QueryExecutorTest {
 	@Test
 	public void testSomeResults() {
 		QueryRequest qr = new QueryRequest();
-		qr.setWord("[word=\"the\"]");
+		qr.setCql("[word=\"the\"]");
 		qr.setStart(0);
 		qr.setEnd(10);
 		QueryExecutor qe = new QueryExecutor();
