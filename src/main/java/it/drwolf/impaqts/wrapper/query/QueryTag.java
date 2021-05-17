@@ -1,5 +1,7 @@
 package it.drwolf.impaqts.wrapper.query;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 // rappresenta la coppia <nome, valore> che è il filtro di ricerca (es. word="casa" oppure pos="VER.*")
 public class QueryTag {
 	// menu a tendina sopra il testo
@@ -37,6 +39,7 @@ public class QueryTag {
 		return this.containsValue;
 	}
 
+	@JsonIgnore
 	public String getCql() {
 		String val = this.value;
 		if (this.containsValue) {

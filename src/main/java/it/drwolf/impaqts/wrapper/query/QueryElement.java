@@ -1,53 +1,55 @@
 package it.drwolf.impaqts.wrapper.query;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.ArrayList;
 import java.util.List;
-
 
 // Rappresenta una lista in AND di una lista di elementi in OR. Sottoclassi:
 // - QueryStructure rappresenta una structure in CQL: <doc>, <s>, ecc.
 // - QueryToken rappresenta un token in CQL: ciò che c'è tra quadre: []
 public class QueryElement {
 
-    //boolean isEmpty = true; // token vuoto (matcha qualsiasi token)
-    List<List<QueryTag>> tags; // lista in AND di una lista di tag in OR: (q1 | q2) & (q3 | q4)
+	//boolean isEmpty = true; // token vuoto (matcha qualsiasi token)
+	List<List<QueryTag>> tags; // lista in AND di una lista di tag in OR: (q1 | q2) & (q3 | q4)
 
-    public QueryElement() {
-        this.tags = new ArrayList<>();
-    }
+	public QueryElement() {
+		this.tags = new ArrayList<>();
+	}
 
-    public List<List<QueryTag>> getTags() {
-        return tags;
-    }
+	public int addTag(QueryTag t, int andGroupPosition) {
+		if (andGroupPosition == -1 || andGroupPosition >= this.tags.size()) {
+			List<QueryTag> newList = new ArrayList<>();
+			newList.add(t);
+            this.tags.add(newList);
+			return this.tags.size() - 1;
+		}
+		List<QueryTag> iList = this.tags.get(andGroupPosition);
+		iList.add(t);
+        this.tags.set(andGroupPosition, iList);
+		return andGroupPosition;
+	}
 
-    public void setTags(List<List<QueryTag>> tags) {
-        this.tags = tags;
-    }
+	// nuovo tag in AND
+	public int addTag(QueryTag t) {
+		return this.addTag(t, -1);
+	}
 
-    public int addTag(QueryTag t, int andGroupPosition) {
-        if (andGroupPosition == -1 || andGroupPosition >= tags.size()) {
-            List<QueryTag> newList = new ArrayList<>();
-            newList.add(t);
-            tags.add(newList);
-            return tags.size()-1;
-        }
-        List<QueryTag> iList = tags.get(andGroupPosition);
-        iList.add(t);
-        tags.set(andGroupPosition,iList);
-        return andGroupPosition;
-    }
+	// add tag in OR
+	public int addTagIntoLastGroup(QueryTag t) {
+		return this.addTag(t, this.tags.size() - 1);
+	}
 
-    // nuovo tag in AND
-    public int addTag(QueryTag t) {
-        return addTag(t,-1);
-    }
+	@JsonIgnore
+	public String getCql() {
+		return null;
+	}
 
-    // add tag in OR
-    public int addTagIntoLastGroup(QueryTag t) {
-        return addTag(t, tags.size()-1);
-    }
+	public List<List<QueryTag>> getTags() {
+		return this.tags;
+	}
 
-    public String getCql() {
-        return null;
-    }
+	public void setTags(List<List<QueryTag>> tags) {
+		this.tags = tags;
+	}
 }

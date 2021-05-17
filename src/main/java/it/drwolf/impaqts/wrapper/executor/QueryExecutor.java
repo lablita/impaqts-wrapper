@@ -6,12 +6,10 @@ import com.sketchengine.manatee.Concordance;
 import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.KWICLines;
 import com.sketchengine.manatee.PosAttr;
-import it.drwolf.impaqts.wrapper.query.QueryPattern;
-import it.drwolf.impaqts.wrapper.query.QueryStructure;
-import it.drwolf.impaqts.wrapper.query.QueryTag;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
+import it.drwolf.impaqts.wrapper.query.QueryPattern;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +29,8 @@ public class QueryExecutor {
 	}
 
 	// corpusName, CQL, start, end
-	private void executeQuery(String corpusName, String cql, int start, int end) throws InterruptedException, IOException {
+	private void executeQuery(String corpusName, String cql, int start, int end)
+			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
@@ -53,8 +52,8 @@ public class QueryExecutor {
 			if (maxLine > count) {
 				maxLine = count;
 			}
-			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end),
-					"50#", "50#", "word", "word", "s", "#", 100);
+			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s",
+					"#", 100);
 			for (int linenum = 0; linenum < maxLine; linenum++) {
 				if (!kl.nextline()) {
 					break;
@@ -77,14 +76,31 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
+	private String getCqlFromQueryRequest(QueryRequest queryRequest) throws JsonProcessingException {
+		System.out.println("### " + this.objectMapper.writeValueAsString(queryRequest));
+		if (queryRequest.getQueryInCql()) {
+			return queryRequest.getCql();
+		}
+		QueryPattern qp = queryRequest.getQueryPattern();
+		if (qp != null) {
+			String cql = qp.getCql();
+			System.out.println("### " + cql);
+			if (!cql.isEmpty()) {
+				return cql;
+			}
+		}
+		return "[]";
+	}
+
 	// chiamata a metodo getCQLfromqueryrequest che trasforma i dati di input in stringa cql
 	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
-				System.out.println("*** CQL *** " + getCqlFromQueryRequest(queryRequest)); //debug
-				this.executeQuery(corpus, getCqlFromQueryRequest(queryRequest), queryRequest.getStart(), queryRequest.getEnd());
+				System.out.println("### *** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
+				this.executeQuery(corpus, this.getCqlFromQueryRequest(queryRequest), queryRequest.getStart(),
+						queryRequest.getEnd());
 			}
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
@@ -104,20 +120,6 @@ public class QueryExecutor {
 		}
 		queryResponse.setCurrentSize(queryResponse.getMetadataValues().size());
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
-	}
-
-	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
-		if (queryRequest.getQueryInCql()) {
-			return queryRequest.getCql();
-		}
-		QueryPattern qp = queryRequest.getQueryPattern();
-		if (qp != null) {
-			String cql = qp.getCql();
-			if (!cql.isEmpty()) {
-				return qp.getCql();
-			}
-		}
-		return "[]";
 	}
 
 }

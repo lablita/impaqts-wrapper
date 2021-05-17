@@ -1,92 +1,93 @@
 package it.drwolf.impaqts.wrapper.query;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.List;
 
 // rappresenta un token in CQL: ciò che c'è tra quadre: []
 public class QueryToken extends QueryElement {
 
-    int minRepetitions = 1; // ripetizioni di questo token, da minRepetitions a maxRepetitions:
-    int maxRepetitions = 1; // es. []{2,3} oppure []{0,1} se opzionale
-    boolean isFilter = false;
-    int filterContextLeft = 0;
-    int filterContextRight = 0;
-    boolean optional = false;
+	int minRepetitions = 1; // ripetizioni di questo token, da minRepetitions a maxRepetitions:
+	int maxRepetitions = 1; // es. []{2,3} oppure []{0,1} se opzionale
+	boolean isFilter = false;
+	int filterContextLeft = 0;
+	int filterContextRight = 0;
+	boolean optional = false;
 
-    public boolean getOptional() {
-        return  optional;
-    }
+	public QueryToken() {
+		super();
+	}
 
-    public int getMinRepetitions() {
-        return minRepetitions;
-    }
+	@Override
+    @JsonIgnore
+	public String getCql() {
+		String cql = "[";
+		if (!this.tags.isEmpty()) {
+			for (List<QueryTag> andList : this.tags) {
+				cql += "(";
+				for (QueryTag orEl : andList) {
+					cql += orEl.getCql() + " | ";
+				}
+				cql = cql.substring(0, cql.length() - 3) + ")";
+				cql += " & ";
+			}
+			cql = cql.substring(0, cql.length() - 3);
+		}
+		cql = cql + "]";
+		if (this.minRepetitions != 1 || this.maxRepetitions != 1) {
+			cql = cql + "{" + this.minRepetitions + "," + this.maxRepetitions + "}";
+		} else if (this.optional) {
+			cql = cql + "?";
+		}
+		return cql;
+	}
 
-    public int getMaxRepetitions() {
-        return maxRepetitions;
-    }
+	public int getFilterContextLeft() {
+		return this.filterContextLeft;
+	}
 
-    public boolean getIsFilter() {
-        return isFilter;
-    }
+	public int getFilterContextRight() {
+		return this.filterContextRight;
+	}
 
-    public int getFilterContextLeft() {
-        return filterContextLeft;
-    }
+	public boolean getIsFilter() {
+		return this.isFilter;
+	}
 
-    public int getFilterContextRight() {
-        return filterContextRight;
-    }
+	public int getMaxRepetitions() {
+		return this.maxRepetitions;
+	}
 
-    public void setMinRepetitions(int minRepetitions) {
-        this.minRepetitions = minRepetitions;
-    }
+	public int getMinRepetitions() {
+		return this.minRepetitions;
+	}
 
-    public void setMaxRepetitions(int maxRepetitions) {
-        this.maxRepetitions = maxRepetitions;
-    }
+	public boolean getOptional() {
+		return this.optional;
+	}
 
-    public void setIsFilter(boolean isFilter) {
-        this.isFilter = isFilter;
-    }
+	public void setFilterContextLeft(int filterContextLeft) {
+		this.filterContextLeft = filterContextLeft;
+	}
 
-    public void setFilterContextLeft(int filterContextLeft) {
-        this.filterContextLeft = filterContextLeft;
-    }
+	public void setFilterContextRight(int filterContextRight) {
+		this.filterContextRight = filterContextRight;
+	}
 
-    public void setFilterContextRight(int filterContextRight) {
-        this.filterContextRight = filterContextRight;
-    }
+	public void setIsFilter(boolean isFilter) {
+		this.isFilter = isFilter;
+	}
 
-    public void setOptional(boolean optional) {
-        this.optional = optional;
-    }
+	public void setMaxRepetitions(int maxRepetitions) {
+		this.maxRepetitions = maxRepetitions;
+	}
 
-    public QueryToken() {
-        super();
-    }
+	public void setMinRepetitions(int minRepetitions) {
+		this.minRepetitions = minRepetitions;
+	}
 
-    public String getCql() {
-        String cql = "[";
-        if (!tags.isEmpty())
-        {
-            for (List<QueryTag> andList : tags)
-            {
-                cql += "(";
-                for (QueryTag orEl : andList)
-                {
-                    cql += orEl.getCql() + " | ";
-                }
-                cql = cql.substring(0,cql.length()-3) + ")";
-                cql += " & ";
-            }
-            cql = cql.substring(0,cql.length()-3);
-        }
-        cql = cql + "]";
-        if (minRepetitions != 1 || maxRepetitions != 1) {
-            cql = cql + "{" + minRepetitions + "," + maxRepetitions + "}";
-        } else if (this.optional) {
-            cql = cql + "?";
-        }
-        return cql;
-    }
+	public void setOptional(boolean optional) {
+		this.optional = optional;
+	}
 
 }

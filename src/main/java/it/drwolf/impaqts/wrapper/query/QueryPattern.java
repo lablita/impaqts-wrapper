@@ -1,5 +1,7 @@
 package it.drwolf.impaqts.wrapper.query;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.ArrayList;
 
 public class QueryPattern {
@@ -13,16 +15,19 @@ public class QueryPattern {
 
 	}
 
+	@JsonIgnore
 	public String getCql() {
 		String cql = "";
 		if (this.tokPattern != null && !this.tokPattern.isEmpty()) {
 			// caso in cui ho esattamente 2 token e il secondo è un filtro con contesto
-			if (this.tokPattern.size() == 2 && this.tokPattern.get(1).getIsFilter() && this.tokPattern.get(0).getMinRepetitions() == 1
-					&& this.tokPattern.get(0).getMaxRepetitions() == 1 && this.tokPattern.get(1).getMinRepetitions() == 1
+			if (this.tokPattern.size() == 2 && this.tokPattern.get(1).getIsFilter()
+					&& this.tokPattern.get(0).getMinRepetitions() == 1
+					&& this.tokPattern.get(0).getMaxRepetitions() == 1
+					&& this.tokPattern.get(1).getMinRepetitions() == 1
 					&& this.tokPattern.get(1).getMaxRepetitions() == 1) {
 				cql = "(meet " + this.tokPattern.get(0).getCql() + " " + this.tokPattern.get(1).getCql();
-				cql += " -" + this.tokPattern.get(1).getFilterContextLeft() + " " + this.tokPattern.get(1).getFilterContextRight()
-						+ ")";
+				cql += " -" + this.tokPattern.get(1).getFilterContextLeft() + " " + this.tokPattern.get(1)
+						.getFilterContextRight() + ")";
 			}
 			// caso normale
 			else {
