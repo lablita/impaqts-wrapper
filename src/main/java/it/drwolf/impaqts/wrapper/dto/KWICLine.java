@@ -1,5 +1,6 @@
 package it.drwolf.impaqts.wrapper.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sketchengine.manatee.KWICLines;
 import it.drwolf.impaqts.wrapper.utils.ContextUtils;
 

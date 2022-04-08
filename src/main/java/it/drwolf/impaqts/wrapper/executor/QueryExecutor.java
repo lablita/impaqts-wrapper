@@ -2,10 +2,7 @@ package it.drwolf.impaqts.wrapper.executor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sketchengine.manatee.Concordance;
-import com.sketchengine.manatee.Corpus;
-import com.sketchengine.manatee.KWICLines;
-import com.sketchengine.manatee.PosAttr;
+import com.sketchengine.manatee.*;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 import it.drwolf.impaqts.wrapper.query.QueryStructure;
 import it.drwolf.impaqts.wrapper.query.QueryTag;
@@ -77,6 +74,77 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
+	private void executeQuerySortLeft(String corpusName, String cql, int start, int end)
+			throws InterruptedException, IOException {
+		final Corpus corpus = new Corpus(corpusName);
+		final Concordance concordance = new Concordance(corpus, "[word=\"finlandia\" | lemma=\"finlandia\"]", 10000000, -1);
+		//left
+		concordance.sort("word/i -1<0~-3<0", false);
+		//right
+		concordance.sort("word/i 1<0~3<0", false);
+		//node
+		concordance.sort("word/i 0<0~0<0", false);
+
+		//
+//		while (true) {
+//			if (concordance.finished()) {
+//				break;
+//			}
+//		}
+
+		//
+		StrVector vals = new StrVector();
+		IntVector idx = new IntVector();
+		/*vals = manatee.StrVector(); idx = manatee.IntVector()
+		if '.' in crit.split('/')[0]: just_letters = False
+    else: just_letters = True
+		conc.sort_idx(crit, vals, idx, just_letters)*/
+
+		concordance.sort_idx("word/i 0<0~0<0", vals, idx, false);
+
+		int count = 0;
+		int requestedSize = end - start;
+		long now = System.currentTimeMillis();
+		List<KWICLine> sentKwicLines = new ArrayList<>();
+		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
+		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
+		// un tempo minimo di esecuzione
+		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+		System.out.println(String.format("### 1. Finished: %s\t Time: %d", "" + concordance.finished(),
+				(System.currentTimeMillis() - now)));
+		List<KWICLine> kwicLines = new ArrayList<>();
+		count = concordance.size();
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.setCurrentSize(count);
+		Integer maxLine = 4000;
+		if (maxLine > count) {
+			maxLine = count;
+		}
+		KWICLines kl = new KWICLines(corpus, concordance.RS(true, 0, 4000), "40#", "40#",
+				"word,tag,lemma", "word", "p,g,err,corr",
+				"=doc.sito,=doc.categoria");
+		for (int linenum = 0; linenum < maxLine; linenum++) {
+			if (!kl.nextline()) {
+				break;
+			}
+			KWICLine kwicLine = new KWICLine(kl);
+			kwicLines.add(kwicLine);
+		}
+		if (!sentKwicLines.equals(kwicLines)) {
+			queryResponse.getKwicLines().addAll(kwicLines);
+			sentKwicLines.clear();
+			sentKwicLines.addAll(kwicLines);
+		}
+		queryResponse.setInProgress(!concordance.finished());
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
+		Thread.sleep(5);
+		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
+				(System.currentTimeMillis() - now)));
+		//}
+		concordance.delete();
+		corpus.delete();
+	}
+
 	// chiamata a metodo getCQLfromqueryrequest che trasforma i dati di input in stringa cql
 	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
 		try {
@@ -84,7 +152,8 @@ public class QueryExecutor {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
 				System.out.println("*** CQL *** " + getCqlFromQueryRequest(queryRequest)); //debug
-				this.executeQuery(corpus, getCqlFromQueryRequest(queryRequest), queryRequest.getStart(), queryRequest.getEnd());
+//				this.executeQuery(corpus, getCqlFromQueryRequest(queryRequest), queryRequest.getStart(), queryRequest.getEnd());
+				this.executeQuerySortLeft("coliweb", null, 1000000, -1);
 			}
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
