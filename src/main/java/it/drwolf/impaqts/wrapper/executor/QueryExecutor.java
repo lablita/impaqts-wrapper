@@ -11,11 +11,13 @@ import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
+import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class QueryExecutor {
 
@@ -86,32 +88,53 @@ public class QueryExecutor {
 	private void executeQuerySort(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
+		//				final Concordance concordance = new Concordance(corpus,
+		//				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
 		final Concordance concordance = new Concordance(corpus,
-				//				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
-				//				final Concordance concordance = new Concordance(corpus,
 				String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord()), 10000000, -1);
-		if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.LEFT_CONTEXT)) {
+
+		/*if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.LEFT_CONTEXT)) {
 			concordance.sort("word/i -1<0~-3<0", false);
 		} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.RIGHT_CONTEXT)) {
 			concordance.sort("word/i 1<0~3<0", false);
 		} else { //NODE_CONTEXT
 			concordance.sort("word/i 0<0~0<0", false);
-		}
+		}*/
 
 		StrVector vals = new StrVector();
 		IntVector idx = new IntVector();
-
 		String critParam;
-		if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.LEFT_CONTEXT)) {
-			critParam = String.format("-1<0~-%d<0", queryRequest.getSortQueryRequest().getNumberTokens());
-		} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.RIGHT_CONTEXT)) {
-			critParam = String.format("1<0~%d<0", queryRequest.getSortQueryRequest().getNumberTokens());
-		} else { //NODE_CONTEXT
-			critParam = "0<0~0<0";
+		String crit;
+
+		//		simple sort
+		if (queryRequest.getSortQueryRequest().getMultilevelSort().isEmpty()) {
+			if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.LEFT_CONTEXT)) {
+				critParam = String.format("-1<0~-%d<0", queryRequest.getSortQueryRequest().getNumberTokens());
+			} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.RIGHT_CONTEXT)) {
+				critParam = String.format("1<0~%d<0", queryRequest.getSortQueryRequest().getNumberTokens());
+			} else { //NODE_CONTEXT
+				critParam = "0<0~0<0";
+			}
+			crit = String.format("%s/%s%s %s", queryRequest.getSortQueryRequest().getAttribute(),
+					queryRequest.getSortQueryRequest().getIgnoreCase() ? "i" : "",
+					queryRequest.getSortQueryRequest().getBackward() ? "r" : "", critParam);
+		} else { //		multilevel sort
+			List<String> critList = new ArrayList<>();
+			for (SortOption sortOption : queryRequest.getSortQueryRequest().getMultilevelSort()) {
+				if (sortOption.getPosition().contains("L")) {//Left
+					critParam = String.format("-1<0~-%s<0", sortOption.getPosition().charAt(0));
+				} else if (sortOption.getPosition().contains("R")) {//Right
+					critParam = String.format("1<0~%s<0", sortOption.getPosition().charAt(0));
+				} else { //Node
+					critParam = "0<0~0<0";
+				}
+				critList.add(
+						String.format("%s/%s%s %s", sortOption.getAttribute(), sortOption.getIgnoreCase() ? "i" : "",
+								sortOption.getBackward() ? "r" : "", critParam));
+			}
+			crit = critList.stream().collect(Collectors.joining(" "));
 		}
-		String crit = String.format("%s/%s%s %s", queryRequest.getSortQueryRequest().getAttribute(),
-				queryRequest.getSortQueryRequest().getIgnoreCase() ? "i" : "",
-				queryRequest.getSortQueryRequest().getBackward() ? "r" : "", critParam);
+
 		concordance.sort_idx(crit, vals, idx, false);
 
 		int count = 0;
