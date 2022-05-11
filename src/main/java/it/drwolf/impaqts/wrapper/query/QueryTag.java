@@ -1,7 +1,15 @@
 package it.drwolf.impaqts.wrapper.query;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 // rappresenta la coppia <nome, valore> che è il filtro di ricerca (es. word="casa" oppure pos="VER.*")
 public class QueryTag {
+	public final static String PHRASE = "phrase";
+	public final static String WORD = "word";
+
+	public final static String CHARACTER = "character";
 	// menu a tendina sopra il testo
 	String name; // nome del tag (es. pos, lemma, ...)
 	// il testo inserito da cercare
@@ -35,11 +43,26 @@ public class QueryTag {
 		this.structure = structure;
 	}
 
+	public String getCQLCharacter() {
+		String cql = "[" + QueryTag.WORD + "=\".*" + this.value + ".*\"]";
+		return cql;
+	}
+
+	public String getCQLPhrase() {
+		String[] valueArray = this.value.split(" ");
+		List<String> cqlList = new ArrayList<>();
+		for (String value : valueArray) {
+			cqlList.add("[" + QueryTag.WORD + "=\"(?i)" + value + "\"]");
+		}
+		return cqlList.stream().collect(Collectors.joining(" "));
+	}
+
 	public boolean getContainsValue() {
 		return this.containsValue;
 	}
 
 	public String getCql() {
+
 		String val = this.value;
 		if (this.containsValue) {
 			val = ".*" + val + ".*";
@@ -48,9 +71,9 @@ public class QueryTag {
 		} else if (this.endsWithValue) {
 			val = ".*" + val;
 		}
-		/*if (!this.matchCase) {
+		if (!this.matchCase) {
 			val = "(?i)" + val;
-		}*/
+		}
 		String op = "=";
 		if (this.negation) {
 			op = "!=";
@@ -59,6 +82,7 @@ public class QueryTag {
 			return this.structure + " " + this.name + op + "\"" + val + "\"";
 		}
 		return this.name + op + "\"" + val + "\"";
+
 	}
 
 	public String getDefaultAttributeCQL() {

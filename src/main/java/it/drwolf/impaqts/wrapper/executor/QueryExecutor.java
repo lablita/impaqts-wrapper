@@ -88,10 +88,10 @@ public class QueryExecutor {
 	private void executeQuerySort(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
-		final Concordance concordance = new Concordance(corpus,
-				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
 		//		final Concordance concordance = new Concordance(corpus,
-		//				String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord()), 10000000, -1);
+		//				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
+		final Concordance concordance = new Concordance(corpus,
+				String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord()), 10000000, -1);
 
 		StrVector vals = new StrVector();
 		IntVector idx = new IntVector();
@@ -132,10 +132,7 @@ public class QueryExecutor {
 		int count = 0;
 		long now = System.currentTimeMillis();
 		List<KWICLine> sentKwicLines = new ArrayList<>();
-		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
-		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
-		// un tempo minimo di esecuzione
-		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+
 		System.out.println(String.format("### 1. Finished: %s\t Time: %d", "" + concordance.finished(),
 				(System.currentTimeMillis() - now)));
 		List<KWICLine> kwicLines = new ArrayList<>();
@@ -165,7 +162,6 @@ public class QueryExecutor {
 		Thread.sleep(5);
 		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
 				(System.currentTimeMillis() - now)));
-		//}
 		concordance.delete();
 		corpus.delete();
 	}
