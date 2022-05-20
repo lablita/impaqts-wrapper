@@ -2,21 +2,32 @@ package it.drwolf.impaqts.wrapper.executor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sketchengine.manatee.CollocItems;
 import com.sketchengine.manatee.Concordance;
 import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.IntVector;
 import com.sketchengine.manatee.KWICLines;
 import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
+import it.drwolf.impaqts.wrapper.dto.CollocationItem;
+import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
+import it.drwolf.impaqts.wrapper.query.QueryTag;
+import it.drwolf.impaqts.wrapper.query.QueryToken;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class QueryExecutor {
@@ -29,9 +40,29 @@ public class QueryExecutor {
 	public static final String LEFT_CONTEXT = "LEFT_CONTEXT";
 	public static final String RIGHT_CONTEXT = "RIGHT_CONTEXT";
 	public static final String NODE_CONTEXT = "NODE_CONTEXT";
-
+	public static final String CACHE_FILE = "/tmp/cache/coliweb/wordfinlandial.conc";
+	public static final String CACHE_DIR = "/tmp/cache/";
+	public static final String EXT_CONC = ".conc";
 	private static final Integer MINIMUM_EXECUTION_TIME = 100;
 	private final ObjectMapper objectMapper;
+
+	private final Map<Character, String> STAT_DESC = new HashMap<Character, String>() {{
+		this.put('t', "T-score");
+		this.put('m', "MI");
+		this.put('3', "MI3");
+		this.put('l', "log likelihood");
+		this.put('s', "min. sensitivity");
+		this.put('p', "MI.log_f");
+		this.put('r', "relative freq.");
+		this.put('f', "absolute freq.");
+		this.put('d', "logDice");
+	}};
+
+	private final Map<String, String> COLLOCATIONS_ATTIBUTE = new HashMap<String, String>() {{
+		this.put("WORD", "word");
+		this.put("TAG", "tag");
+		this.put("LEMMA", "lemma");
+	}};
 
 	public QueryExecutor() {
 		this.objectMapper = new ObjectMapper();
@@ -83,6 +114,108 @@ public class QueryExecutor {
 		}
 		concordance.delete();
 		corpus.delete();
+	}
+
+	private void executeQueryCollocation(String corpusName, QueryRequest queryRequest)
+			throws InterruptedException, IOException {
+		final Corpus corpus = new Corpus(corpusName);
+		final int start = queryRequest.getStart();
+		final int end = queryRequest.getEnd();
+
+		CollocationQueryRequest collocationQueryRequest = queryRequest.getCollocationQueryRequest();
+
+		String wordValue = null;
+		for (QueryToken queryToken : queryRequest.getQueryPattern().getTokPattern()) {
+			for (List<QueryTag> tagList : queryToken.getTags()) {
+				for (QueryTag queryTag : tagList) {
+					if (queryTag.getName().equals(QueryTag.WORD)) {
+						wordValue = queryTag.getValue();
+						break;
+					}
+					if (wordValue != null) {
+						break;
+					}
+				}
+				if (wordValue != null) {
+					break;
+				}
+			}
+		}
+		if (wordValue != null) {
+			Concordance concordance = null;
+			Path cachePath = Paths.get(QueryExecutor.CACHE_DIR + corpusName + "/");
+			if (!Files.exists(cachePath)) {
+				Files.createDirectory(cachePath);
+			}
+			String fileWordConcordance = QueryTag.WORD + "_" + wordValue + QueryExecutor.EXT_CONC;
+			Optional<Path> pathWordOptional = Files.list(cachePath)
+					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
+					.findFirst();
+			if (pathWordOptional.isPresent()) {
+				concordance = new Concordance(corpus, pathWordOptional.get().toString());
+			} else {
+				String cql = String.format("[word=\"%s\" | lemma=\"%s\"]", wordValue, wordValue);
+				concordance = new Concordance(corpus, cql, 10000000, -1);
+				long now = System.currentTimeMillis();
+				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+					Thread.sleep(5);
+				}
+				concordance.save(QueryExecutor.CACHE_DIR + corpusName + "/" + fileWordConcordance);
+
+			}
+			concordance.sync();
+			CollocItems collocItems = new CollocItems(concordance,
+					this.COLLOCATIONS_ATTIBUTE.get(collocationQueryRequest.getAttribute()),
+					collocationQueryRequest.getSortBy().charAt(0), collocationQueryRequest.getMinFreqCorpus(),
+					collocationQueryRequest.getMinFreqRange(), collocationQueryRequest.getRangeFrom(),
+					collocationQueryRequest.getRangeTo(), collocationQueryRequest.getcMaxItems() + 1);
+			List<CollocationItem> resultCollocations = new ArrayList<>();
+			while (!collocItems.eos()) {
+				while (!collocItems.eos()) {
+					CollocationItem collocationItem = new CollocationItem();
+					collocationItem.setWord(collocItems.get_item());
+					collocationItem.setConcurrenceCount(collocItems.get_cnt());
+					collocationItem.setCandidateCount(collocItems.get_freq());
+					for (String func : collocationQueryRequest.getShowFunc()) {
+						switch (func) {
+						case "t":
+							collocationItem.setTScore(collocItems.get_bgr('t'));
+							break;
+						case "m":
+							collocationItem.setMi(collocItems.get_bgr('m'));
+							break;
+						case "3":
+							collocationItem.setMi3(collocItems.get_bgr('3'));
+							break;
+						case "l":
+							collocationItem.setLogLikelihood(collocItems.get_bgr('l'));
+							break;
+						case "s":
+							collocationItem.setMinSensitivity(collocItems.get_bgr('s'));
+							break;
+						case "d":
+							collocationItem.setLogDice(collocItems.get_bgr('d'));
+							break;
+						case "p":
+							collocationItem.setMiLogF(collocItems.get_bgr('p'));
+							break;
+						default:
+							break;
+						}
+					}
+					resultCollocations.add(collocationItem);
+					collocItems.next();
+				}
+			}
+			QueryResponse queryResponse = new QueryResponse();
+			queryResponse.setCurrentSize(resultCollocations.size());
+			queryResponse.setCollocations(resultCollocations);
+			queryResponse.setInProgress(!concordance.finished());
+			System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
+			concordance.delete();
+			corpus.delete();
+		}
+
 	}
 
 	private void executeQuerySort(String corpusName, QueryRequest queryRequest)
@@ -187,9 +320,10 @@ public class QueryExecutor {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
 				if (queryRequest.getSortQueryRequest() != null) {
-					this.executeQuerySort("coliweb", queryRequest); //sort
+					this.executeQuerySort(corpus, queryRequest); //sort
 				} else if (queryRequest.getCollocationQueryRequest() != null) {
 					//collocation
+					this.executeQueryCollocation(corpus, queryRequest); //sort
 				} else {
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, this.getCqlFromQueryRequest(queryRequest), queryRequest.getStart(),
