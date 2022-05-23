@@ -143,7 +143,11 @@ public class QueryExecutor {
 		}
 		if (wordValue != null) {
 			Concordance concordance = null;
-			Path cachePath = Paths.get(QueryExecutor.CACHE_DIR + corpusName + "/");
+			Path cachePath = Paths.get(QueryExecutor.CACHE_DIR);
+			if (!Files.exists(cachePath)) {
+				Files.createDirectory(cachePath);
+			}
+			cachePath = Paths.get(QueryExecutor.CACHE_DIR + corpusName + "/");
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
