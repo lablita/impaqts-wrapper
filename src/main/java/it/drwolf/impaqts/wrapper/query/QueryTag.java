@@ -6,10 +6,12 @@ import java.util.stream.Collectors;
 
 // rappresenta la coppia <nome, valore> che è il filtro di ricerca (es. word="casa" oppure pos="VER.*")
 public class QueryTag {
+	public final static String LEMMA = "lemma";
 	public final static String PHRASE = "phrase";
 	public final static String WORD = "word";
-
 	public final static String CHARACTER = "character";
+
+	public final static String CQL = "cql";
 	// menu a tendina sopra il testo
 	String name; // nome del tag (es. pos, lemma, ...)
 	// il testo inserito da cercare

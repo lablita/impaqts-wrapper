@@ -1,20 +1,20 @@
 package it.drwolf.impaqts.wrapper.exceptions;
 
-public class TagPresentException extends RuntimeException {
+public class TokenPresentException extends RuntimeException {
 
-	public TagPresentException() {
+	public TokenPresentException() {
 		super();
 	}
 
-	public TagPresentException(String message) {
+	public TokenPresentException(String message) {
 		super(message);
 	}
 
-	public TagPresentException(String message, Throwable cause) {
+	public TokenPresentException(String message, Throwable cause) {
 		super(message, cause);
 	}
 
-	public TagPresentException(Throwable cause) {
+	public TokenPresentException(Throwable cause) {
 		super(cause);
 	}
 }

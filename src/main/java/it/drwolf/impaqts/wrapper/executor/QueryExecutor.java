@@ -15,6 +15,8 @@ import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
+import it.drwolf.impaqts.wrapper.exceptions.TagPresentException;
+import it.drwolf.impaqts.wrapper.exceptions.TokenPresentException;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 import it.drwolf.impaqts.wrapper.query.QueryTag;
 import it.drwolf.impaqts.wrapper.query.QueryToken;
@@ -73,6 +75,9 @@ public class QueryExecutor {
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final Concordance concordance = new Concordance();
+		//cql = "[word=\"ratto\"] [word=\"delle\"] [word=\"sabine\"]"; //al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
+		//TODO
+		//dimensione pagina
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int count = 0;
 		int requestedSize = end - start;
@@ -124,24 +129,8 @@ public class QueryExecutor {
 
 		CollocationQueryRequest collocationQueryRequest = queryRequest.getCollocationQueryRequest();
 
-		String wordValue = null;
-		for (QueryToken queryToken : queryRequest.getQueryPattern().getTokPattern()) {
-			for (List<QueryTag> tagList : queryToken.getTags()) {
-				for (QueryTag queryTag : tagList) {
-					if (queryTag.getName().equals(QueryTag.WORD)) {
-						wordValue = queryTag.getValue();
-						break;
-					}
-					if (wordValue != null) {
-						break;
-					}
-				}
-				if (wordValue != null) {
-					break;
-				}
-			}
-		}
-		if (wordValue != null) {
+		QueryTag queryTag = this.getFirstTag(queryRequest);
+		if (queryTag.getValue() != null) {
 			Concordance concordance = null;
 			Path cachePath = Paths.get(QueryExecutor.CACHE_DIR);
 			if (!Files.exists(cachePath)) {
@@ -151,15 +140,19 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance = QueryTag.WORD + "_" + wordValue + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			Optional<Path> pathWordOptional = Files.list(cachePath)
 					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
 					.findFirst();
 			if (pathWordOptional.isPresent()) {
 				concordance = new Concordance(corpus, pathWordOptional.get().toString());
 			} else {
-				String cql = String.format("[word=\"%s\" | lemma=\"%s\"]", wordValue, wordValue);
-				concordance = new Concordance(corpus, cql, 10000000, -1);
+				concordance = new Concordance();
+				//				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 0, 0);
+				//al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
+				concordance.load_from_query(corpus, "[word=\"ratto\"] [word=\"delle\"] [word=\"sabine\"]", 0, 0);
+
 				long now = System.currentTimeMillis();
 				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 					Thread.sleep(5);
@@ -315,6 +308,19 @@ public class QueryExecutor {
 			}
 		}
 		return "[]";
+	}
+
+	private QueryTag getFirstTag(QueryRequest queryRequest) {
+		Map<String, String> result = new HashMap<>();
+		if (queryRequest.getQueryPattern().getTokPattern().isEmpty()) {
+			throw new TokenPresentException("no token present");
+		} else {
+			QueryToken queryToken = queryRequest.getQueryPattern().getTokPattern().get(0);
+			if (queryToken.getTags().isEmpty() || queryToken.getTags().get(0).isEmpty()) {
+				throw new TagPresentException("no tag present");
+			}
+			return queryToken.getTags().get(0).get(0);
+		}
 	}
 
 	// chiamata a metodo getCQLfromqueryrequest che trasforma i dati di input in stringa cql
