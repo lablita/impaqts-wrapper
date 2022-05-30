@@ -54,7 +54,11 @@ public class QueryTag {
 		String[] valueArray = this.value.split(" ");
 		List<String> cqlList = new ArrayList<>();
 		for (String value : valueArray) {
-			cqlList.add("[" + QueryTag.WORD + "=\"(?i)" + value + "\"]");
+			//come su bonito
+			//cqlList.add("[" + QueryTag.WORD + "=\"(?i)" + value + "\"]");
+
+			//come su http://corpora.dipartimentidieccellenza-dilef.unifi.it/
+			cqlList.add("[" + QueryTag.WORD + "=\"" + value + "\"]");
 		}
 		return cqlList.stream().collect(Collectors.joining(" "));
 	}

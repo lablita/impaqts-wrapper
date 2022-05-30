@@ -11,8 +11,6 @@ public class CollocationQueryRequest {
 	private List<String> showFunc;
 	private String sortBy;
 
-	private Integer cMaxItems;
-
 	public String getAttribute() {
 		return this.attribute;
 	}
@@ -39,10 +37,6 @@ public class CollocationQueryRequest {
 
 	public String getSortBy() {
 		return this.sortBy;
-	}
-
-	public Integer getcMaxItems() {
-		return this.cMaxItems;
 	}
 
 	public void setAttribute(String attribute) {
@@ -73,7 +67,4 @@ public class CollocationQueryRequest {
 		this.sortBy = sortBy;
 	}
 
-	public void setcMaxItems(Integer cMaxItems) {
-		this.cMaxItems = cMaxItems;
-	}
 }

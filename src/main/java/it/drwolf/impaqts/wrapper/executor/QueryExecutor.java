@@ -71,13 +71,13 @@ public class QueryExecutor {
 	}
 
 	// corpusName, CQL, start, end
-	private void executeQuery(String corpusName, String cql, int start, int end)
-			throws InterruptedException, IOException {
+	private void executeQuery(String corpusName, QueryRequest queryRequest) throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
+		final String cql = this.getCqlFromQueryRequest(queryRequest);
+		final int start = queryRequest.getStart();
+		final int end = queryRequest.getEnd();
 		final Concordance concordance = new Concordance();
 		//cql = "[word=\"ratto\"] [word=\"delle\"] [word=\"sabine\"]"; //al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
-		//TODO
-		//dimensione pagina
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int count = 0;
 		int requestedSize = end - start;
@@ -149,9 +149,8 @@ public class QueryExecutor {
 				concordance = new Concordance(corpus, pathWordOptional.get().toString());
 			} else {
 				concordance = new Concordance();
-				//				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 0, 0);
 				//al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
-				concordance.load_from_query(corpus, "[word=\"ratto\"] [word=\"delle\"] [word=\"sabine\"]", 0, 0);
+				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 
 				long now = System.currentTimeMillis();
 				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
@@ -165,7 +164,7 @@ public class QueryExecutor {
 					this.COLLOCATIONS_ATTIBUTE.get(collocationQueryRequest.getAttribute()),
 					collocationQueryRequest.getSortBy().charAt(0), collocationQueryRequest.getMinFreqCorpus(),
 					collocationQueryRequest.getMinFreqRange(), collocationQueryRequest.getRangeFrom(),
-					collocationQueryRequest.getRangeTo(), collocationQueryRequest.getcMaxItems() + 1);
+					collocationQueryRequest.getRangeTo(), end);
 			List<CollocationItem> resultCollocations = new ArrayList<>();
 			while (!collocItems.eos()) {
 				while (!collocItems.eos()) {
@@ -336,8 +335,7 @@ public class QueryExecutor {
 					this.executeQueryCollocation(corpus, queryRequest); //sort
 				} else {
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
-					this.executeQuery(corpus, this.getCqlFromQueryRequest(queryRequest), queryRequest.getStart(),
-							queryRequest.getEnd());
+					this.executeQuery(corpus, queryRequest);
 				}
 			}
 		} catch (InterruptedException | IOException e) {
