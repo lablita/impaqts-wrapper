@@ -86,7 +86,8 @@ public class QueryExecutor {
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
 		// un tempo minimo di esecuzione
-		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+		while (!concordance.finished()) {
 			System.out.println(String.format("### 1. Finished: %s\t Time: %d", "" + concordance.finished(),
 					(System.currentTimeMillis() - now)));
 			List<KWICLine> kwicLines = new ArrayList<>();
