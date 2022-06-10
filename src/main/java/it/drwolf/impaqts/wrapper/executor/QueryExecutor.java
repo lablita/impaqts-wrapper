@@ -218,10 +218,12 @@ public class QueryExecutor {
 	private void executeQuerySort(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
+		final String query = String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord());
+		final int start = queryRequest.getStart();
+		final int end = queryRequest.getEnd();
 		//		final Concordance concordance = new Concordance(corpus,
 		//				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
-		final Concordance concordance = new Concordance(corpus,
-				String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord()), 10000000, -1);
+		final Concordance concordance = new Concordance(corpus, query, 10000000, -1);
 
 		StrVector vals = new StrVector();
 		IntVector idx = new IntVector();
@@ -234,8 +236,10 @@ public class QueryExecutor {
 				critParam = String.format("-1<0~-%d<0", queryRequest.getSortQueryRequest().getNumberTokens());
 			} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.RIGHT_CONTEXT)) {
 				critParam = String.format("1>0~%d>0", queryRequest.getSortQueryRequest().getNumberTokens());
-			} else { //NODE_CONTEXT
+			} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.NODE_CONTEXT)) {
 				critParam = "0<0~0>0";
+			} else { //SHUFFLE_CONTEXT
+				critParam = "";
 			}
 			crit = String.format("%s/%s%s %s", queryRequest.getSortQueryRequest().getAttribute(),
 					queryRequest.getSortQueryRequest().getIgnoreCase() ? "i" : "",
@@ -273,7 +277,7 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		KWICLines kl = new KWICLines(corpus, concordance.RS(true, 0, 100), "40#", "40#", "word,tag,lemma", "word",
+		KWICLines kl = new KWICLines(corpus, concordance.RS(true, start, end), "40#", "40#", "word,tag,lemma", "word",
 				"p,g,err,corr", "=doc.sito,=doc.categoria");
 		for (int linenum = 0; linenum < maxLine; linenum++) {
 			if (!kl.nextline()) {
