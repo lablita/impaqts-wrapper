@@ -260,9 +260,12 @@ public class QueryExecutor {
 			}
 			crit = critList.stream().collect(Collectors.joining(" "));
 		}
+
+		boolean justLetters = !crit.split("/")[0].contains(".");
+				
 		if (critParam.length() > 0) {
 			concordance.sort(crit);
-			concordance.sort_idx(crit, vals, idx, false);
+			concordance.sort_idx(crit, vals, idx, justLetters);
 		} else {
 			concordance.shuffle();
 		}
