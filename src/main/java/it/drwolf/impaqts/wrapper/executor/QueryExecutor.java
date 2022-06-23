@@ -221,14 +221,14 @@ public class QueryExecutor {
 		final String query = String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord());
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
-		//		final Concordance concordance = new Concordance(corpus,
+		//		final Concordance concordance = new Concordance(corpus,sort
 		//				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
 		final Concordance concordance = new Concordance(corpus, query, 10000000, -1);
 
 		StrVector vals = new StrVector();
 		IntVector idx = new IntVector();
-		String critParam;
-		String crit;
+		String critParam = "";
+		String crit = "";
 
 		//		simple sort
 		if (queryRequest.getSortQueryRequest().getMultilevelSort().isEmpty()) {
@@ -238,12 +238,12 @@ public class QueryExecutor {
 				critParam = String.format("1>0~%d>0", queryRequest.getSortQueryRequest().getNumberTokens());
 			} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.NODE_CONTEXT)) {
 				critParam = "0<0~0>0";
-			} else { //SHUFFLE_CONTEXT
-				critParam = "";
 			}
-			crit = String.format("%s/%s%s %s", queryRequest.getSortQueryRequest().getAttribute(),
-					queryRequest.getSortQueryRequest().getIgnoreCase() ? "i" : "",
-					queryRequest.getSortQueryRequest().getBackward() ? "r" : "", critParam);
+			if (critParam.length() > 0) {
+				crit = String.format("%s/%s%s %s", queryRequest.getSortQueryRequest().getAttribute(),
+						queryRequest.getSortQueryRequest().getIgnoreCase() ? "i" : "",
+						queryRequest.getSortQueryRequest().getBackward() ? "r" : "", critParam);
+			}
 		} else { //		multilevel sort
 			List<String> critList = new ArrayList<>();
 			for (SortOption sortOption : queryRequest.getSortQueryRequest().getMultilevelSort()) {
@@ -260,8 +260,12 @@ public class QueryExecutor {
 			}
 			crit = critList.stream().collect(Collectors.joining(" "));
 		}
-		concordance.sort(crit);
-		concordance.sort_idx(crit, vals, idx, false);
+		if (critParam.length() > 0) {
+			concordance.sort(crit);
+			concordance.sort_idx(crit, vals, idx, false);
+		} else {
+			concordance.shuffle();
+		}
 
 		int count = 0;
 		long now = System.currentTimeMillis();
