@@ -262,10 +262,14 @@ public class QueryExecutor {
 		}
 
 		boolean justLetters = !crit.split("/")[0].contains(".");
-				
+
 		if (critParam.length() > 0) {
-			concordance.sort(crit);
-			concordance.sort_idx(crit, vals, idx, justLetters);
+			if (!queryRequest.getSortQueryRequest().getMultilevelSort().isEmpty()) {
+				concordance.sort(crit, false);
+			} else {
+				concordance.sort(crit);
+				concordance.sort_idx(crit, vals, idx, justLetters);
+			}
 		} else {
 			concordance.shuffle();
 		}
@@ -293,6 +297,11 @@ public class QueryExecutor {
 			KWICLine kwicLine = new KWICLine(kl);
 			kwicLines.add(kwicLine);
 		}
+
+		if (!queryRequest.getSortQueryRequest().getMultilevelSort().isEmpty()) {
+			concordance.sort_idx(crit, vals, idx, justLetters);
+		}
+
 		if (!sentKwicLines.equals(kwicLines)) {
 			queryResponse.getKwicLines().addAll(kwicLines);
 			sentKwicLines.clear();
