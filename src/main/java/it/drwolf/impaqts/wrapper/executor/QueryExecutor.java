@@ -347,10 +347,14 @@ public class QueryExecutor {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
 				if (queryRequest.getSortQueryRequest() != null) {
-					this.executeQuerySort(corpus, queryRequest); //sort
+					//sorting
+					this.executeQuerySort(corpus, queryRequest);
 				} else if (queryRequest.getCollocationQueryRequest() != null) {
 					//collocation
-					this.executeQueryCollocation(corpus, queryRequest); //sort
+					this.executeQueryCollocation(corpus, queryRequest);
+				} else if (queryRequest.getFrequencyQueryRequest() != null) {
+					//frequency
+					this.executeQueryCollocation(corpus, queryRequest);
 				} else {
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, queryRequest);
