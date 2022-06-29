@@ -77,7 +77,6 @@ public class QueryExecutor {
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
 		final Concordance concordance = new Concordance();
-		//cql = "[word=\"ratto\"] [word=\"delle\"] [word=\"sabine\"]"; //al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int count = 0;
 		int requestedSize = end - start;
@@ -221,8 +220,6 @@ public class QueryExecutor {
 		final String query = String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord());
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
-		//		final Concordance concordance = new Concordance(corpus,sort
-		//				String.format("[word=\"%s\" | lemma=\"%s\"]", "finlandia", "finlandia"), 10000000, -1);
 		final Concordance concordance = new Concordance(corpus, query, 10000000, -1);
 
 		StrVector vals = new StrVector();

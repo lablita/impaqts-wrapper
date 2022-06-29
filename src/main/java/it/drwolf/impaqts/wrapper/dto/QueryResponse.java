@@ -8,7 +8,6 @@ public class QueryResponse {
 	private List<KWICLine> kwicLines = new ArrayList<>();
 	private Integer currentSize;
 	private List<String> metadataValues = new ArrayList<>();
-
 	private List<CollocationItem> collocations = new ArrayList<>();
 
 	public List<CollocationItem> getCollocations() {
