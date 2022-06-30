@@ -5,7 +5,7 @@ import java.util.List;
 
 public class FrequencyQueryRequest {
 	private Integer frequencyLimit;
-	private Boolean categoryWithoutResults;
+	private Boolean includeCategories;
 	private List<String> category = new ArrayList<>();
 	private List<FrequencyOption> multilevelFrequency = new ArrayList<>();
 
@@ -13,12 +13,12 @@ public class FrequencyQueryRequest {
 		return this.category;
 	}
 
-	public Boolean getCategoryWithoutResults() {
-		return this.categoryWithoutResults;
-	}
-
 	public Integer getFrequencyLimit() {
 		return this.frequencyLimit;
+	}
+
+	public Boolean getIncludeCategories() {
+		return this.includeCategories;
 	}
 
 	public List<FrequencyOption> getMultilevelFrequency() {
@@ -29,12 +29,12 @@ public class FrequencyQueryRequest {
 		this.category = category;
 	}
 
-	public void setCategoryWithoutResults(Boolean categoryWithoutResults) {
-		this.categoryWithoutResults = categoryWithoutResults;
-	}
-
 	public void setFrequencyLimit(Integer frequencyLimit) {
 		this.frequencyLimit = frequencyLimit;
+	}
+
+	public void setIncludeCategories(Boolean includeCategories) {
+		this.includeCategories = includeCategories;
 	}
 
 	public void setMultilevelFrequency(List<FrequencyOption> multilevelFrequency) {
