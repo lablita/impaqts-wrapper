@@ -38,6 +38,8 @@ public class QueryExecutor {
 	public static final String ATTRLIST = "ATTRLIST";
 	public static final String STRUCTLIST = "STRUCTLIST";
 	public static final String DOCSTRUCTURE = "DOCSTRUCTURE";
+	public static final int SAMPLE_SIZE = 10000000;
+	public static final long FULL_SIZE = -1L;
 	//sort
 	public static final String LEFT_CONTEXT = "LEFT_CONTEXT";
 	public static final String RIGHT_CONTEXT = "RIGHT_CONTEXT";
@@ -214,6 +216,42 @@ public class QueryExecutor {
 
 	}
 
+	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest)
+			throws InterruptedException, IOException {
+		final Corpus corpus = new Corpus(corpusName);
+		final String cql = this.getCqlFromQueryRequest(queryRequest);
+		final int start = queryRequest.getStart();
+		final int end = queryRequest.getEnd();
+		final Concordance concordance = new Concordance();
+		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
+		String crit = "doc.sito/ 0>0 doc.categoria/ 0>0";//da sostituire con della logica
+		concordance.sort(crit, false);
+		concordance.sync();
+
+		int count = 0;
+		int requestedSize = end - start;
+		count = concordance.size();
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.setCurrentSize(count);
+		Integer maxLine = requestedSize;
+		if (maxLine > count) {
+			maxLine = count;
+		}
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "", "", "word,tag,lemma", "word",
+				"p,g,err,corr", "=doc.sito,=doc.categoria");
+		while (kl.nextline()) {
+			StrVector refList = kl.get_ref_list();
+			//			int linegroup = kl.get_linegroup();
+			//			linegroup = labelmap.get(linegroup, '_') leftwords = tokens2strclass(kl.get_left());
+			//			rightwords = tokens2strclass(kl.get_right()) kwicwords = tokens2strclass(kl.get_kwic()) kl.get_ref_list();
+		}
+
+		//		corpus.freq_dist();
+
+		concordance.delete();
+		corpus.delete();
+	}
+
 	private void executeQuerySort(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
@@ -354,7 +392,7 @@ public class QueryExecutor {
 					this.executeQueryCollocation(corpus, queryRequest);
 				} else if (queryRequest.getFrequencyQueryRequest() != null) {
 					//frequency
-					this.executeQueryCollocation(corpus, queryRequest);
+					this.executeQueryFrequency(corpus, queryRequest);
 				} else {
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, queryRequest);
