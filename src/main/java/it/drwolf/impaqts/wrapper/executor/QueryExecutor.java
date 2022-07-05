@@ -163,7 +163,7 @@ public class QueryExecutor {
 			}
 			queryResponse.setInProgress(!concordance.finished());
 			System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
-			Thread.sleep(5);
+			// Thread.sleep(5);
 			System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
 					(System.currentTimeMillis() - now)));
 		}
