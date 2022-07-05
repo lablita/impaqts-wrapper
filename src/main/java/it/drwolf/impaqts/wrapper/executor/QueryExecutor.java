@@ -7,14 +7,21 @@ import com.sketchengine.manatee.Concordance;
 import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.IntVector;
 import com.sketchengine.manatee.KWICLines;
+import com.sketchengine.manatee.NumVector;
 import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
+import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
+import it.drwolf.impaqts.wrapper.dto.FrequencyOption;
+import it.drwolf.impaqts.wrapper.dto.FrequencyOutput;
+import it.drwolf.impaqts.wrapper.dto.FrequencyResultLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
+import it.drwolf.impaqts.wrapper.dto.KWICLineDTO;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
+import it.drwolf.impaqts.wrapper.dto.TokenClassDTO;
 import it.drwolf.impaqts.wrapper.exceptions.TagPresentException;
 import it.drwolf.impaqts.wrapper.exceptions.TokenPresentException;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
@@ -26,6 +33,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,8 +77,47 @@ public class QueryExecutor {
 		this.put("LEMMA", "lemma");
 	}};
 
+	private final Map<String, String> FROM_CODE = new HashMap<String, String>() {{
+		this.put("lc", "<0>");
+		this.put("rc", ">0");
+		this.put("kl", "<0");
+		this.put("kr", ">0");
+	}};
+
 	public QueryExecutor() {
 		this.objectMapper = new ObjectMapper();
+	}
+
+	private float[] computeCorrection(NumVector freqs, NumVector norms, int normWidth, Corpus corpus) {
+		if (norms.stream().reduce(0L, Long::sum) <= 0L) {
+			return new float[] { normWidth / freqs.stream().reduce(0L, Long::max), 0L };
+		} else {
+			corpus.get_sizes().split("\n");
+			return new float[] { 0F, 0F };
+		}
+	}
+
+	private List<KWICLineDTO> elaborateKWICLines(KWICLines kl) {
+		int refsLen = 1;
+		StrVector refList = kl.get_ref_list();
+		List<KWICLineDTO> kwicLineDTOList = new ArrayList<>();
+		while (kl.nextline()) {
+			KWICLineDTO kwicLineDTO = new KWICLineDTO();
+			kwicLineDTO.setTokNum(kl.get_pos());
+			kwicLineDTO.setHitlen(kl.get_kwiclen());
+			if (refList.size() > 0) {
+				kwicLineDTO.setRefs(refList.subList(0, refsLen));
+				kwicLineDTO.setTblRefs(refList.subList(0, refsLen));
+			}
+			kwicLineDTO.setLeftLabel(this.tokens2StrClass(kl.get_left()));
+			kwicLineDTO.setKwic(this.tokens2StrClass(kl.get_kwic()));
+			kwicLineDTO.setRightLabel(this.tokens2StrClass(kl.get_right()));
+			kwicLineDTO.setLinks(new ArrayList<>());
+			kwicLineDTO.setLineGroup("_");
+			kwicLineDTO.setLineGroupId(0);
+		}
+
+		return kwicLineDTOList;
 	}
 
 	// corpusName, CQL, start, end
@@ -228,26 +276,25 @@ public class QueryExecutor {
 		concordance.sort(crit, false);
 		concordance.sync();
 
-		int count = 0;
-		int requestedSize = end - start;
-		count = concordance.size();
+		int count = concordance.size();
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
-		Integer maxLine = requestedSize;
-		if (maxLine > count) {
-			maxLine = count;
-		}
 		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "", "", "word,tag,lemma", "word",
 				"p,g,err,corr", "=doc.sito,=doc.categoria");
-		while (kl.nextline()) {
-			StrVector refList = kl.get_ref_list();
-			//			int linegroup = kl.get_linegroup();
-			//			linegroup = labelmap.get(linegroup, '_') leftwords = tokens2strclass(kl.get_left());
-			//			rightwords = tokens2strclass(kl.get_right()) kwicwords = tokens2strclass(kl.get_kwic()) kl.get_ref_list();
-		}
 
-		//		corpus.freq_dist();
+		List<KWICLineDTO> kwicLineDTOList = this.elaborateKWICLines(kl);
+		FrequencyOutput frequencyOutput = new FrequencyOutput();
+		frequencyOutput.setLines(kwicLineDTOList);
+		frequencyOutput.setFromP(1);
+		frequencyOutput.setConcSize(concordance.size());
 
+		boolean ml = true;
+		String sCrit = this.freqCritBuild(queryRequest);
+
+		queryResponse.setFrequencies(
+				Arrays.asList(new FrequencyItem[] { this.xfreqDist(concordance, corpus, start, end, sCrit, 0) }));
+
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
 		corpus.delete();
 	}
@@ -351,6 +398,35 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
+	private String freqCritBuild(QueryRequest queryRequest) {
+		List<String> resList = new ArrayList<>();
+		if (!queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().isEmpty()) {
+			List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest()
+					.getMultilevelFrequency();
+			for (FrequencyOption frequencyOption : frequencyOptionList) {
+				resList.add(this.oneLevelCrit("", frequencyOption.getAttribute(), "",
+						this.fromAttributeToSymbolic(frequencyOption.getPosition()), "rc",
+						frequencyOption.getIgnoreCase() ? "i" : "", "e", ""));
+			}
+		} else {
+			//single level
+		}
+
+		return String.join(" ", resList);
+	}
+
+	private String fromAttributeToSymbolic(String attribute) {
+		if (attribute.equals(QueryExecutor.NODE_CONTEXT)) {
+			return " 0~0";
+		} else if (attribute.contains("L")) {
+			//left
+			return String.format(" -%s", attribute.substring(0, 1));
+		} else {
+			//right
+			return String.format(" %s", attribute.substring(0, 1));
+		}
+	}
+
 	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
 		if (queryRequest.getQueryInCql()) {
 			return queryRequest.getCql();
@@ -403,6 +479,19 @@ public class QueryExecutor {
 		}
 	}
 
+	private String oneLevelCrit(String prefix, String attr, String ctx, String pos, String fcode, String icase,
+			String bward, String empty) {
+		StringBuilder res = new StringBuilder("");
+		res.append(String.format("%s%s/%s%s%s", prefix, attr, icase, bward, empty));
+		if (ctx.isEmpty()) {
+			ctx = String.format("%s%s", pos, this.FROM_CODE.get(fcode));
+		} else if (ctx.contains("~") && attr.contains(".")) {
+			ctx = ctx.split("~")[0];
+		}
+		res.append(ctx);
+		return res.toString();
+	}
+
 	// recupera valori dei metadati che sono sui singoli documenti
 	private void retrieveMetadata(String corpusName, String attribute) throws JsonProcessingException {
 		final Corpus corpus = new Corpus(corpusName);
@@ -416,6 +505,44 @@ public class QueryExecutor {
 		}
 		queryResponse.setCurrentSize(queryResponse.getMetadataValues().size());
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+	}
+
+	private List<TokenClassDTO> tokens2StrClass(StrVector strVector) {
+		List<TokenClassDTO> tokenClassDTOList = new ArrayList<>();
+		for (int i = 0; i < strVector.size(); i += 2) {
+			TokenClassDTO tokenClassDTO = new TokenClassDTO();
+			tokenClassDTO.setToken(strVector.get(i));
+			tokenClassDTO.setClazz(strVector.get(i + 1));
+			tokenClassDTOList.add(tokenClassDTO);
+		}
+		return tokenClassDTOList;
+	}
+
+	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, int start, int end, String crit,
+			int limit) {
+		FrequencyItem result = new FrequencyItem();
+		StrVector words = new StrVector();
+		NumVector freqs = new NumVector();
+		NumVector norms = new NumVector();
+
+		corpus.freq_dist(concordance.RS(), crit, limit, words, freqs, norms);
+		float[] toBars = this.computeCorrection(freqs, norms, 300, corpus);
+		List<FrequencyResultLine> frlList = new ArrayList<>();
+		for (int i = 0; i < words.size(); i++) {
+			FrequencyResultLine frl = new FrequencyResultLine();
+			frl.setWord(Arrays.asList(words.get(i).split("\t")));
+			frl.setFreq(freqs.get(i));
+			frl.setFbar((long) (freqs.get(i) * toBars[0]) + 1);
+			frl.setNorel(norms.get(i));
+			frlList.add(frl);
+		}
+		result.setItems(frlList.stream()
+				.sorted(Comparator.comparing(FrequencyResultLine::getFreq).reversed())
+				.collect(Collectors.toList()));
+		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
+		result.setTotal(frlList.size());
+		result.setHead(crit);
+		return result;
 	}
 
 }
