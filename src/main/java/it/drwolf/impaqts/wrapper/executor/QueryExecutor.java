@@ -270,6 +270,7 @@ public class QueryExecutor {
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
+		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
 		String crit = "doc.sito/ 0>0 doc.categoria/ 0>0";//da sostituire con della logica
@@ -291,8 +292,8 @@ public class QueryExecutor {
 		boolean ml = true;
 		String sCrit = this.freqCritBuild(queryRequest);
 
-		queryResponse.setFrequencies(
-				Arrays.asList(new FrequencyItem[] { this.xfreqDist(concordance, corpus, start, end, sCrit, 0) }));
+		queryResponse.setFrequencies(Arrays.asList(
+				new FrequencyItem[] { this.xfreqDist(concordance, corpus, start, end, sCrit, freqLimit) }));
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
