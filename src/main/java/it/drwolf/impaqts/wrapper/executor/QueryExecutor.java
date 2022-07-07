@@ -212,7 +212,7 @@ public class QueryExecutor {
 			concordance.sync();
 			CollocItems collocItems = new CollocItems(concordance,
 					this.COLLOCATIONS_ATTIBUTE.get(collocationQueryRequest.getAttribute()),
-					collocationQueryRequest.getSortBy().charAt(0), collocationQueryRequest.getMinFreqCorpus(),
+					collocationQueryRequest.getSortBy()!=null ? collocationQueryRequest.getSortBy().charAt(0): 'm', collocationQueryRequest.getMinFreqCorpus(),
 					collocationQueryRequest.getMinFreqRange(), collocationQueryRequest.getRangeFrom(),
 					collocationQueryRequest.getRangeTo(), end);
 			List<CollocationItem> resultCollocations = new ArrayList<>();
@@ -222,7 +222,13 @@ public class QueryExecutor {
 					collocationItem.setWord(collocItems.get_item());
 					collocationItem.setConcurrenceCount(collocItems.get_cnt());
 					collocationItem.setCandidateCount(collocItems.get_freq());
-					for (String func : collocationQueryRequest.getShowFunc()) {
+					List<String> functionsToBeShowed = collocationQueryRequest.getShowFunc();
+					if (functionsToBeShowed == null || functionsToBeShowed.isEmpty()) {
+						functionsToBeShowed = new ArrayList<>();
+						functionsToBeShowed.add("m");
+					}
+					// System.out.println(functionsToBeShowed);
+					for (String func : functionsToBeShowed) {
 						switch (func) {
 						case "t":
 							collocationItem.setTScore(collocItems.get_bgr('t'));
@@ -542,8 +548,8 @@ public class QueryExecutor {
 		}
 		//sorting
 		List<FrequencyResultLine> frequencyItemList;
-		if (frequencyColSort == null || frequencyColSort.equals("freq")) {
-			if (frequencyTypeSort.equals("asc")) {
+		if ("freq".equals(frequencyColSort)) {
+			if ("asc".equals(frequencyTypeSort)) {
 				frequencyItemList = frlList.stream()
 						.sorted(Comparator.comparing(FrequencyResultLine::getFreq))
 						.collect(Collectors.toList());
@@ -553,13 +559,15 @@ public class QueryExecutor {
 						.collect(Collectors.toList());
 			}
 		} else {
-			if (frequencyTypeSort.equals("asc")) {
+			if ("asc".equals(frequencyTypeSort)) {
 				FrequencyLevelComparator frequencyLevelComparator = new FrequencyLevelComparator();
-				frequencyLevelComparator.setLevel(Integer.parseInt(frequencyColSort));
+				// frequencyLevelComparator.setLevel(Integer.parseInt(frequencyColSort));
+				frequencyLevelComparator.setLevel(Integer.parseInt("0"));
 				frequencyItemList = frlList.stream().sorted(frequencyLevelComparator).collect(Collectors.toList());
 			} else {
 				FrequencyLevelComparator frequencyLevelComparator = new FrequencyLevelComparator();
-				frequencyLevelComparator.setLevel(Integer.parseInt(frequencyColSort));
+				frequencyLevelComparator.setLevel(Integer.parseInt("0"));
+				// frequencyLevelComparator.setLevel(Integer.parseInt(frequencyColSort));
 				frequencyItemList = frlList.stream()
 						.sorted(frequencyLevelComparator.reversed())
 						.collect(Collectors.toList());
