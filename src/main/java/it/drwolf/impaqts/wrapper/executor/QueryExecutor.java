@@ -565,7 +565,7 @@ public class QueryExecutor {
 						.collect(Collectors.toList());
 			}
 		}
-		result.setItems(frequencyItemList.subList(start, end));
+		//		result.setItems(frequencyItemList.subList(start, end));
 		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
 		result.setTotal(frlList.size());
 		result.setHead(crit);
