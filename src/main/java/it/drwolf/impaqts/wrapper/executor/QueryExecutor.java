@@ -106,8 +106,8 @@ public class QueryExecutor {
 			kwicLineDTO.setTokNum(kl.get_pos());
 			kwicLineDTO.setHitlen(kl.get_kwiclen());
 			if (refList.size() > 0) {
-				kwicLineDTO.setRefs(refList.subList(0, refsLen));
-				kwicLineDTO.setTblRefs(refList.subList(0, refsLen));
+				//				kwicLineDTO.setRefs(refList.subList(0, refsLen));
+				//				kwicLineDTO.setTblRefs(refList.subList(0, refsLen));
 			}
 			kwicLineDTO.setLeftLabel(this.tokens2StrClass(kl.get_left()));
 			kwicLineDTO.setKwic(this.tokens2StrClass(kl.get_kwic()));
