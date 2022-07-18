@@ -565,6 +565,7 @@ public class QueryExecutor {
 						.collect(Collectors.toList());
 			}
 		}
+		end = end >= frequencyItemList.size() ? frequencyItemList.size() : end;
 		result.setItems(frequencyItemList.subList(start, end));
 		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
 		result.setTotal(frlList.size());
