@@ -17,28 +17,20 @@ public class MainWrapper implements Callable<Integer> {
 	private static final String MANATEE_REGISTRY = "MANATEE_REGISTRY";
 	private final ObjectMapper objectMapper;
 
-	@CommandLine.Option(names = { "-c", "--corpus" },
-			required = true,
-			description = "Corpus name")
+	@CommandLine.Option(names = { "-c", "--corpus" }, required = true, description = "Corpus name")
 	String corpus;
-	@CommandLine.Option(names = { "-l", "--jnilib" },
-			required = true,
-			description = "Manatee JNI lib full path")
+	@CommandLine.Option(names = { "-l", "--jnilib" }, required = true, description = "Manatee JNI lib full path")
 	Path manateeLibPath;
-	@CommandLine.Option(names = { "-s", "--start" },
-			description = "Results start index (first is 0)")
+	@CommandLine.Option(names = { "-s", "--start" }, description = "Results start index (first is 0)")
 	Integer start;
-	@CommandLine.Option(names = { "-e", "--end" },
-			description = "Results end index")
+	@CommandLine.Option(names = { "-e", "--end" }, description = "Results end index")
 	Integer end;
-	@CommandLine.Option(names = { "-q", "--cql" },
-			description = "CQL Query")
+	@CommandLine.Option(names = { "-q", "--cql" }, description = "CQL Query")
 	String cql;
-	@CommandLine.Option(names = { "-j", "--json" },
-			description = "Query request in json format")
+	@CommandLine.Option(names = { "-j", "--json" }, description = "Query request in json format")
 	String json;
-	@CommandLine.Option(names = { "-m", "--corpusmetadata" },
-			description = "Retrieve corpus metadata. Specify first or second level attribute (eg. doc.file)")
+	@CommandLine.Option(names = { "-m",
+			"--corpusmetadata" }, description = "Retrieve corpus metadata. Specify first or second level attribute (eg. doc.file)")
 	String corpusMetadata;
 
 	@CommandLine.Spec
@@ -105,8 +97,7 @@ public class MainWrapper implements Callable<Integer> {
 	}
 
 	private void validate() {
-		if ((this.json == null || this.json.isEmpty()) && (this.corpusMetadata == null
-				|| this.corpusMetadata.isEmpty())) {
+		if ((this.json == null || this.json.isEmpty()) && (this.corpusMetadata == null || this.corpusMetadata.isEmpty())) {
 			if (this.start == null || this.end == null || this.cql == null) {
 				throw new CommandLine.ParameterException(this.spec.commandLine(),
 						"If you don't specify a '--json' option or a '--corpusmetadata' option, then you must specify '--start', '--end' and '--cql' option.");

@@ -29,6 +29,8 @@ import it.drwolf.impaqts.wrapper.query.QueryTag;
 import it.drwolf.impaqts.wrapper.query.QueryToken;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -88,12 +90,38 @@ public class QueryExecutor {
 		this.objectMapper = new ObjectMapper();
 	}
 
+	private float[] calculateNormAndMaxRelByFreqAndNorm(NumVector freqs, NumVector norms, float tonBar) {
+		long result = 0L;
+		float newRel = 0F;
+		float maxRel = 0F;
+		for (int index = 0; index < freqs.size(); index++) {
+			if (result == 0L) {
+				result = 100000L;
+				norms.set(index, 100000L);
+			}
+			newRel = freqs.get(index) / (norms.get(index) * tonBar);
+			if (maxRel < newRel) {
+				maxRel = newRel;
+			}
+		}
+		return new float[] { norms.get(norms.size() - 1), maxRel };
+	}
+
 	private float[] computeCorrection(NumVector freqs, NumVector norms, int normWidth, Corpus corpus) {
+		long maxFreq = freqs.stream().max(Long::compareTo).get();
+		long maxNorm = norms.stream().max(Long::compareTo).get();
 		if (norms.stream().reduce(0L, Long::sum) <= 0L) {
-			return new float[] { normWidth / freqs.stream().reduce(0L, Long::max), 0L };
+			return new float[] { normWidth / maxFreq, 0L };
 		} else {
-			corpus.get_sizes().split("\n");
-			return new float[] { 0F, 0F };
+			List<String> sizes = Arrays.asList(corpus.get_sizes().split("\n"));
+			String normSumStr = sizes.stream().filter(item -> item.contains("normsum")).findFirst().get();
+			String wordCountStr = sizes.stream().filter(item -> item.contains("wordcount")).findFirst().get();
+			long normSum = Long.parseLong(normSumStr.substring(normSumStr.indexOf(" ") + 1));
+			long wordCount = Long.parseLong(wordCountStr.substring(wordCountStr.indexOf(" ") + 1));
+			long sumN = normSum > 0 ? normSum : (wordCount > 0 ? wordCount : corpus.size());
+			long sumF = freqs.stream().reduce(0L, Long::sum);
+			float corr = sumF / maxFreq <= sumN / maxNorm ? sumF / maxFreq : sumN / maxNorm;
+			return new float[] { ((float) normWidth / sumF) * corr, ((float) normWidth / sumN) * corr };
 		}
 	}
 
@@ -212,9 +240,9 @@ public class QueryExecutor {
 			concordance.sync();
 			CollocItems collocItems = new CollocItems(concordance,
 					this.COLLOCATIONS_ATTIBUTE.get(collocationQueryRequest.getAttribute()),
-					collocationQueryRequest.getSortBy()!=null ? collocationQueryRequest.getSortBy().charAt(0): 'm', collocationQueryRequest.getMinFreqCorpus(),
-					collocationQueryRequest.getMinFreqRange(), collocationQueryRequest.getRangeFrom(),
-					collocationQueryRequest.getRangeTo(), end);
+					collocationQueryRequest.getSortBy() != null ? collocationQueryRequest.getSortBy().charAt(0) : 'm',
+					collocationQueryRequest.getMinFreqCorpus(), collocationQueryRequest.getMinFreqRange(),
+					collocationQueryRequest.getRangeFrom(), collocationQueryRequest.getRangeTo(), end);
 			List<CollocationItem> resultCollocations = new ArrayList<>();
 			while (!collocItems.eos()) {
 				while (!collocItems.eos()) {
@@ -301,8 +329,8 @@ public class QueryExecutor {
 		String sCrit = this.freqCritBuild(queryRequest);
 
 		queryResponse.setFrequencies(Arrays.asList(new FrequencyItem[] {
-				this.xfreqDist(concordance, corpus, start, end, sCrit, freqLimit, frequencyColSort,
-						frequencyTypeSort) }));
+				this.xfreqDist(concordance, corpus, start, end, sCrit, freqLimit, frequencyColSort, frequencyTypeSort,
+						queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().size() > 0, 300, 0L) }));
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
@@ -418,10 +446,11 @@ public class QueryExecutor {
 						this.fromAttributeToSymbolic(frequencyOption.getPosition()), "rc",
 						frequencyOption.getIgnoreCase() ? "i" : "", "e", ""));
 			}
+			//			return String.join(" ", resList);
 		} else {
-			//single level
+			//single type
+			//return queryRequest.getFrequencyQueryRequest().getCategories()
 		}
-
 		return String.join(" ", resList);
 	}
 
@@ -529,22 +558,53 @@ public class QueryExecutor {
 	}
 
 	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, int start, int end, String crit, int limit,
-			String frequencyColSort, String frequencyTypeSort) {
+			String frequencyColSort, String frequencyTypeSort, boolean multi, int normWidth, long wlMaxFreq) {
 		FrequencyItem result = new FrequencyItem();
 		StrVector words = new StrVector();
 		NumVector freqs = new NumVector();
 		NumVector norms = new NumVector();
-
-		corpus.freq_dist(concordance.RS(), crit, limit, words, freqs, norms);
-		float[] toBars = this.computeCorrection(freqs, norms, 300, corpus);
 		List<FrequencyResultLine> frlList = new ArrayList<>();
-		for (int i = 0; i < words.size(); i++) {
-			FrequencyResultLine frl = new FrequencyResultLine();
-			frl.setWord(Arrays.asList(words.get(i).split("\t")));
-			frl.setFreq(freqs.get(i));
-			frl.setFbar((long) (freqs.get(i) * toBars[0]) + 1);
-			frl.setNorel(norms.get(i));
-			frlList.add(frl);
+		crit = multi ? crit : "doc.sito 0";
+		corpus.freq_dist(concordance.RS(), crit, limit, words, freqs, norms);
+		float[] toBars = this.computeCorrection(freqs, norms, normWidth, corpus);
+		int noRel = multi ? 1 : 0;
+		int normHeight = 15;
+		long maxF = freqs.stream().max(Long::compareTo).get();
+		wlMaxFreq = wlMaxFreq > 0 ? wlMaxFreq : maxF;
+
+		if (multi) {//multilevel
+			for (int i = 0; i < words.size(); i++) {
+				if (freqs.get(i) <= wlMaxFreq) {
+					FrequencyResultLine frl = new FrequencyResultLine();
+					frl.setWord(Arrays.asList(words.get(i).split("\t")));
+					frl.setFreq(freqs.get(i));
+					frl.setfBar((long) (freqs.get(i) * toBars[0]) + 1);
+					frl.setNoRel(noRel);
+					frlList.add(frl);
+				}
+			}
+		} else if (toBars[1] > 0F) {//text type
+			float[] nfMaxrel = this.calculateNormAndMaxRelByFreqAndNorm(freqs, norms, toBars[1]);
+			for (int i = 0; i < words.size(); i++) {
+				if (freqs.get(i) <= wlMaxFreq) {
+					FrequencyResultLine frl = new FrequencyResultLine();
+					frl.setWord(Arrays.asList(words.get(i).split("\t")));
+					frl.setFreq(freqs.get(i));
+					frl.setfBar((long) (freqs.get(i) * toBars[0]) + 1);
+					frl.setNorm(nfMaxrel[0]);
+					frl.setnBar((int) (nfMaxrel[0] * toBars[1]));
+					frl.setRelBar(1 + (int) ((freqs.get(
+							i) * toBars[0] * normWidth) / (nfMaxrel[0] * toBars[1] * nfMaxrel[1])));
+					frl.setNoRel(noRel);
+					frl.setFreqBar((normHeight * (freqs.get(i) + 1)) / ((maxF + 1) + 1));
+					BigDecimal bd = new BigDecimal(
+							((freqs.get(i) * toBars[0]) / (this.calculateNormAndMaxRelByFreqAndNorm(freqs, norms,
+									toBars[1])[0] * toBars[1]) * 100));
+					bd = bd.setScale(1, RoundingMode.HALF_UP);
+					frl.setRel(bd.floatValue());
+					frlList.add(frl);
+				}
+			}
 		}
 		//sorting
 		List<FrequencyResultLine> frequencyItemList;
@@ -561,13 +621,11 @@ public class QueryExecutor {
 		} else {
 			if ("asc".equals(frequencyTypeSort)) {
 				FrequencyLevelComparator frequencyLevelComparator = new FrequencyLevelComparator();
-				// frequencyLevelComparator.setLevel(Integer.parseInt(frequencyColSort));
 				frequencyLevelComparator.setLevel(Integer.parseInt("0"));
 				frequencyItemList = frlList.stream().sorted(frequencyLevelComparator).collect(Collectors.toList());
 			} else {
 				FrequencyLevelComparator frequencyLevelComparator = new FrequencyLevelComparator();
 				frequencyLevelComparator.setLevel(Integer.parseInt("0"));
-				// frequencyLevelComparator.setLevel(Integer.parseInt(frequencyColSort));
 				frequencyItemList = frlList.stream()
 						.sorted(frequencyLevelComparator.reversed())
 						.collect(Collectors.toList());
