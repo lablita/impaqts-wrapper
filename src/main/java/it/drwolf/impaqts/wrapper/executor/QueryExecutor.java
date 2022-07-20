@@ -90,21 +90,20 @@ public class QueryExecutor {
 		this.objectMapper = new ObjectMapper();
 	}
 
-	private float[] calculateNormAndMaxRelByFreqAndNorm(NumVector freqs, NumVector norms, float tonBar) {
-		long result = 0L;
-		float newRel = 0F;
+	private float calculateMaxRel(NumVector freqs, NumVector norms, float[] toBars) {
 		float maxRel = 0F;
 		for (int index = 0; index < freqs.size(); index++) {
-			if (result == 0L) {
-				result = 100000L;
-				norms.set(index, 100000L);
+			long nf = norms.get(index);
+			if (nf == 0L) {
+				nf = 100000L;
+				norms.set(index, nf);
 			}
-			newRel = freqs.get(index) / (norms.get(index) * tonBar);
+			float newRel = (freqs.get(index) * toBars[0]) / (nf * toBars[1]);
 			if (maxRel < newRel) {
 				maxRel = newRel;
 			}
 		}
-		return new float[] { norms.get(norms.size() - 1), maxRel };
+		return maxRel;
 	}
 
 	private float[] computeCorrection(NumVector freqs, NumVector norms, int normWidth, Corpus corpus) {
@@ -584,22 +583,20 @@ public class QueryExecutor {
 				}
 			}
 		} else if (toBars[1] > 0F) {//text type
-			float[] nfMaxrel = this.calculateNormAndMaxRelByFreqAndNorm(freqs, norms, toBars[1]);
+			float maxrel = this.calculateMaxRel(freqs, norms, toBars);
 			for (int i = 0; i < words.size(); i++) {
 				if (freqs.get(i) <= wlMaxFreq) {
 					FrequencyResultLine frl = new FrequencyResultLine();
 					frl.setWord(Arrays.asList(words.get(i).split("\t")));
 					frl.setFreq(freqs.get(i));
 					frl.setfBar((long) (freqs.get(i) * toBars[0]) + 1);
-					frl.setNorm(nfMaxrel[0]);
-					frl.setnBar((int) (nfMaxrel[0] * toBars[1]));
-					frl.setRelBar(1 + (int) ((freqs.get(
-							i) * toBars[0] * normWidth) / (nfMaxrel[0] * toBars[1] * nfMaxrel[1])));
+					frl.setNorm(norms.get(i));
+					frl.setnBar((int) (norms.get(i) * toBars[1]));
+					frl.setRelBar(
+							1 + (int) ((freqs.get(i) * toBars[0] * normWidth) / (norms.get(i) * toBars[1] * maxrel)));
 					frl.setNoRel(noRel);
-					frl.setFreqBar((normHeight * (freqs.get(i) + 1)) / ((maxF + 1) + 1));
-					BigDecimal bd = new BigDecimal(
-							((freqs.get(i) * toBars[0]) / (this.calculateNormAndMaxRelByFreqAndNorm(freqs, norms,
-									toBars[1])[0] * toBars[1]) * 100));
+					frl.setFreqBar((normHeight * (freqs.get(i) + 1)) / (maxF + 1) + 1);
+					BigDecimal bd = new BigDecimal(((freqs.get(i) * toBars[0]) / (norms.get(i) * toBars[1]) * 100));
 					bd = bd.setScale(1, RoundingMode.HALF_UP);
 					frl.setRel(bd.floatValue());
 					frlList.add(frl);

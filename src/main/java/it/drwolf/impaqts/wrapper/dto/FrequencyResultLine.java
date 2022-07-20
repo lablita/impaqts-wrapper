@@ -10,7 +10,7 @@ public class FrequencyResultLine {
 	private long noRel;
 	private long freqBar;
 	private int nBar;
-	private float norm;
+	private long norm;
 	private float rel;
 	private long relBar;
 
@@ -26,7 +26,7 @@ public class FrequencyResultLine {
 		return this.noRel;
 	}
 
-	public float getNorm() {
+	public long getNorm() {
 		return this.norm;
 	}
 
@@ -62,7 +62,7 @@ public class FrequencyResultLine {
 		this.noRel = noRel;
 	}
 
-	public void setNorm(float norm) {
+	public void setNorm(long norm) {
 		this.norm = norm;
 	}
 
