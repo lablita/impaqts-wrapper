@@ -303,9 +303,9 @@ public class QueryExecutor {
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
-		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
-		final String frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
-		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
+		//		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
+		//		final String frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
+		//		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
 		String crit = "doc.sito/ 0>0 doc.categoria/ 0>0";//da sostituire con della logica
@@ -325,10 +325,8 @@ public class QueryExecutor {
 		frequencyOutput.setConcSize(concordance.size());
 
 		boolean ml = true;
-		String sCrit = this.freqCritBuild(queryRequest);
-
 		queryResponse.setFrequencies(Arrays.asList(new FrequencyItem[] {
-				this.xfreqDist(concordance, corpus, start, end, sCrit, freqLimit, frequencyColSort, frequencyTypeSort,
+				this.xfreqDist(concordance, corpus, queryRequest, start, end,
 						queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().size() > 0, 300, 0L) }));
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
@@ -556,15 +554,23 @@ public class QueryExecutor {
 		return tokenClassDTOList;
 	}
 
-	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, int start, int end, String crit, int limit,
-			String frequencyColSort, String frequencyTypeSort, boolean multi, int normWidth, long wlMaxFreq) {
+	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, QueryRequest queryRequest, int start,
+			int end, boolean multi, int normWidth, long wlMaxFreq) {
+		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
+		final String frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
+		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
 		FrequencyItem result = new FrequencyItem();
 		StrVector words = new StrVector();
 		NumVector freqs = new NumVector();
 		NumVector norms = new NumVector();
 		List<FrequencyResultLine> frlList = new ArrayList<>();
-		crit = multi ? crit : "doc.sito 0";
-		corpus.freq_dist(concordance.RS(), crit, limit, words, freqs, norms);
+		List<String> critList = new ArrayList<>();
+		if (multi) {
+			critList.add(this.freqCritBuild(queryRequest));
+		} else {
+			critList.addAll(queryRequest.getFrequencyQueryRequest().getCategories());
+		}
+		corpus.freq_dist(concordance.RS(), critList.get(0) + " 0", freqLimit, words, freqs, norms);
 		float[] toBars = this.computeCorrection(freqs, norms, normWidth, corpus);
 		int noRel = multi ? 1 : 0;
 		int normHeight = 15;
@@ -632,7 +638,7 @@ public class QueryExecutor {
 		result.setItems(frequencyItemList.subList(start, end));
 		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
 		result.setTotal(frlList.size());
-		result.setHead(crit);
+		result.setHead(critList.get(0));
 		return result;
 	}
 
