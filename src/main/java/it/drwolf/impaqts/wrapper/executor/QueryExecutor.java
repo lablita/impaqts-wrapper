@@ -564,13 +564,13 @@ public class QueryExecutor {
 		NumVector freqs = new NumVector();
 		NumVector norms = new NumVector();
 		List<FrequencyResultLine> frlList = new ArrayList<>();
-		List<String> critList = new ArrayList<>();
+		String crit;
 		if (multi) {
-			critList.add(this.freqCritBuild(queryRequest));
+			crit = this.freqCritBuild(queryRequest);
 		} else {
-			critList.addAll(queryRequest.getFrequencyQueryRequest().getCategories());
+			crit = queryRequest.getFrequencyQueryRequest().getCategory();
 		}
-		corpus.freq_dist(concordance.RS(), critList.get(0) + " 0", freqLimit, words, freqs, norms);
+		corpus.freq_dist(concordance.RS(), crit + " 0", freqLimit, words, freqs, norms);
 		float[] toBars = this.computeCorrection(freqs, norms, normWidth, corpus);
 		int noRel = multi ? 1 : 0;
 		int normHeight = 15;
@@ -608,18 +608,52 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
+			if (queryRequest.getFrequencyQueryRequest()
+					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
+					.getCategory()
+					.contains(".")) {
+				List<String> allVals = new ArrayList<>();
+				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
+				for (int i = 0; i < attr.id_range(); i++) {
+					allVals.add(attr.id2str(i));
+				}
+				for (String val : allVals) {
+					if (words.stream().filter(w -> w.contains(val)).findAny().isPresent()) {
+						continue;
+					}
+					FrequencyResultLine frl = new FrequencyResultLine();
+					frl.setWord(Arrays.asList(new String[] { val }));
+					frl.setFreq(0);
+					frl.setfBar(0);
+					frl.setNorm(0);
+					frl.setnBar(0);
+					frl.setRelBar(0);
+					frl.setNoRel(noRel);
+					frl.setFreqBar(0);
+					frl.setRel(0);
+					frlList.add(frl);
+				}
+			}
 		}
 		//sorting
 		List<FrequencyResultLine> frequencyItemList;
-		if ("freq".equals(frequencyColSort)) {
+		if ("freq".equals(frequencyColSort) || "rel".equals(frequencyColSort)) {
 			if ("asc".equals(frequencyTypeSort)) {
-				frequencyItemList = frlList.stream()
-						.sorted(Comparator.comparing(FrequencyResultLine::getFreq))
-						.collect(Collectors.toList());
+				frequencyItemList = "freq".equals(frequencyColSort) ?
+						frlList.stream()
+								.sorted(Comparator.comparing(FrequencyResultLine::getFreq))
+								.collect(Collectors.toList()) :
+						frlList.stream()
+								.sorted(Comparator.comparing(FrequencyResultLine::getRel))
+								.collect(Collectors.toList());
 			} else {
-				frequencyItemList = frlList.stream()
-						.sorted(Comparator.comparing(FrequencyResultLine::getFreq).reversed())
-						.collect(Collectors.toList());
+				frequencyItemList = "freq".equals(frequencyColSort) ?
+						frlList.stream()
+								.sorted(Comparator.comparing(FrequencyResultLine::getFreq).reversed())
+								.collect(Collectors.toList()) :
+						frlList.stream()
+								.sorted(Comparator.comparing(FrequencyResultLine::getRel).reversed())
+								.collect(Collectors.toList());
 			}
 		} else {
 			if ("asc".equals(frequencyTypeSort)) {
@@ -638,7 +672,7 @@ public class QueryExecutor {
 		result.setItems(frequencyItemList.subList(start, end));
 		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
 		result.setTotal(frlList.size());
-		result.setHead(critList.get(0));
+		result.setHead(crit);
 		return result;
 	}
 
