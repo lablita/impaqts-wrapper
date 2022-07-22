@@ -12,6 +12,7 @@ import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
+import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
 import it.drwolf.impaqts.wrapper.dto.FrequencyOption;
 import it.drwolf.impaqts.wrapper.dto.FrequencyOutput;
@@ -86,6 +87,12 @@ public class QueryExecutor {
 		this.put("kr", ">0");
 	}};
 
+	private final Map<String, String> CONTEXT_CONCORDANCE = new HashMap<String, String>() {{
+		this.put("ALL", "P");
+		this.put("ANY", "P");
+		this.put("NONE", "N");
+	}};
+
 	public QueryExecutor() {
 		this.objectMapper = new ObjectMapper();
 	}
@@ -124,6 +131,33 @@ public class QueryExecutor {
 		}
 	}
 
+	private void contextConcordance(Concordance concordance,
+			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
+		List<String> lemmaList = Arrays.asList(contextConcordanceQueryRequest.getLemma().split(" "));
+		String lcTx = "";
+		String rcTx = "";
+		int rank;
+		if ("BOTH".equals(contextConcordanceQueryRequest.getWindow())) {
+			lcTx += (-contextConcordanceQueryRequest.getToken());
+			rcTx += contextConcordanceQueryRequest.getToken();
+			rank = 1;
+		} else if ("LEFT".equals(contextConcordanceQueryRequest.getWindow())) {
+			lcTx += (-contextConcordanceQueryRequest.getToken());
+			rcTx += "-1";
+			rank = -1;
+		} else {
+			lcTx = "1";
+			rcTx += contextConcordanceQueryRequest.getToken();
+			rank = 1;
+		}
+		for (String lemma : lemmaList) {
+			int collNum = concordance.numofcolls() + 1;
+			String query = String.format("[lemma=\"%s\"];", lemma);
+			concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
+			concordance.delete_pnfilter(collNum, true);
+		}
+	}
+
 	private List<KWICLineDTO> elaborateKWICLines(KWICLines kl) {
 		int refsLen = 1;
 		StrVector refList = kl.get_ref_list();
@@ -154,7 +188,7 @@ public class QueryExecutor {
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
 		final Concordance concordance = new Concordance();
-		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
+		//		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int count = 0;
 		int requestedSize = end - start;
 		long now = System.currentTimeMillis();
@@ -162,8 +196,13 @@ public class QueryExecutor {
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
 		// un tempo minimo di esecuzione
+		boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
 		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 		while (!concordance.finished()) {
+			concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
+			if (withContextConcordance) {
+				this.contextConcordance(concordance, queryRequest.getContextConcordanceQueryRequest());
+			}
 			System.out.println(String.format("### 1. Finished: %s\t Time: %d", "" + concordance.finished(),
 					(System.currentTimeMillis() - now)));
 			List<KWICLine> kwicLines = new ArrayList<>();
@@ -174,8 +213,9 @@ public class QueryExecutor {
 			if (maxLine > count) {
 				maxLine = count;
 			}
-			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s",
-					"#", 100);
+			//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
+			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+					"up,g,err,corr", "doc", 100);
 			for (int linenum = 0; linenum < maxLine; linenum++) {
 				if (!kl.nextline()) {
 					break;
@@ -461,6 +501,13 @@ public class QueryExecutor {
 			//right
 			return String.format(" %s", attribute.substring(0, 1));
 		}
+	}
+
+	private String getCqlFromContextConcordanceRqueryRequest(
+			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
+		String context = null;
+
+		return context;
 	}
 
 	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
