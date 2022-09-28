@@ -12,7 +12,9 @@ import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
+import it.drwolf.impaqts.wrapper.dto.ConcordanceFromCollocationParameters;
 import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
+import it.drwolf.impaqts.wrapper.dto.DescResponse;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
 import it.drwolf.impaqts.wrapper.dto.FrequencyOption;
 import it.drwolf.impaqts.wrapper.dto.FrequencyOutput;
@@ -131,8 +133,9 @@ public class QueryExecutor {
 		}
 	}
 
-	private void contextConcordance(Concordance concordance,
+	private List<DescResponse> contextConcordance(Concordance concordance,
 			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
+		List<DescResponse> descResponses = new ArrayList<>();
 		List<String> lemmaList = Arrays.asList(contextConcordanceQueryRequest.getLemma().split(" "));
 		String lcTx = "";
 		String rcTx = "";
@@ -155,7 +158,12 @@ public class QueryExecutor {
 			String query = String.format("[lemma=\"%s\"];", lemma);
 			concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
 			concordance.delete_pnfilter(collNum, true);
+			DescResponse descResponse = new DescResponse();
+			descResponse.setNiceArg(lemma);
+			descResponse.setSize(concordance.size());
+			descResponses.add(descResponse);
 		}
+		return descResponses;
 	}
 
 	private List<KWICLineDTO> elaborateKWICLines(KWICLines kl) {
@@ -198,44 +206,67 @@ public class QueryExecutor {
 		// un tempo minimo di esecuzione
 		boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
 		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
+		int whileCount = 1;
 		while (!concordance.finished()) {
-			concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
-			if (withContextConcordance) {
-				this.contextConcordance(concordance, queryRequest.getContextConcordanceQueryRequest());
-			}
-			System.out.println(String.format("### 1. Finished: %s\t Time: %d", "" + concordance.finished(),
-					(System.currentTimeMillis() - now)));
-			List<KWICLine> kwicLines = new ArrayList<>();
-			count = concordance.size();
-			QueryResponse queryResponse = new QueryResponse();
-			queryResponse.setCurrentSize(count);
-			Integer maxLine = requestedSize;
-			if (maxLine > count) {
-				maxLine = count;
-			}
-			//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
-			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
-					"up,g,err,corr", "doc", 100);
-			for (int linenum = 0; linenum < maxLine; linenum++) {
-				if (!kl.nextline()) {
-					break;
-				}
-				KWICLine kwicLine = new KWICLine(kl);
-				kwicLines.add(kwicLine);
-			}
-			if (!sentKwicLines.equals(kwicLines)) {
-				queryResponse.getKwicLines().addAll(kwicLines);
-				sentKwicLines.clear();
-				sentKwicLines.addAll(kwicLines);
-			}
-			queryResponse.setInProgress(!concordance.finished());
-			System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
-			// Thread.sleep(5);
-			System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
-					(System.currentTimeMillis() - now)));
+			Thread.sleep(50);
+			System.out.println(String.format("### WHILE %d", whileCount++));
 		}
+		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = this.getFakeConcordanceFromCollocationParameters();
+		concordance.set_collocation(concordanceFromCollocationParameters.getCollNum(), concordanceFromCollocationParameters.getContextQuery(), concordanceFromCollocationParameters.getLeftContext(), concordanceFromCollocationParameters.getRightContext(), concordanceFromCollocationParameters.getRank(), concordanceFromCollocationParameters.isExcludeKwic());
+		count = concordance.size();
+		List<DescResponse> descResponses;
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.setCurrentSize(count);
+		if (withContextConcordance) {
+			descResponses = this.contextConcordance(concordance, queryRequest.getContextConcordanceQueryRequest());
+			queryResponse.getDescResponses().addAll(descResponses);
+		}
+		List<KWICLine> kwicLines = new ArrayList<>();
+		Integer maxLine = requestedSize;
+		if (maxLine > count) {
+			maxLine = count;
+		}
+		//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+				"up,g,err,corr", "doc", 100);
+		for (int linenum = 0; linenum < maxLine; linenum++) {
+			if (!kl.nextline()) {
+				break;
+			}
+			KWICLine kwicLine = new KWICLine(kl);
+			kwicLines.add(kwicLine);
+		}
+		if (!sentKwicLines.equals(kwicLines)) {
+			queryResponse.getKwicLines().addAll(kwicLines);
+			sentKwicLines.clear();
+			sentKwicLines.addAll(kwicLines);
+		}
+		queryResponse.setInProgress(!concordance.finished());
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
+		Thread.sleep(5);
+		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
+				(System.currentTimeMillis() - now)));
+		// Thread.sleep(8000);
+		// System.out.println("### Size: " + concordance.size());
 		concordance.delete();
 		corpus.delete();
+	}
+
+	private ConcordanceFromCollocationParameters getFakeConcordanceFromCollocationParameters() {
+		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = new ConcordanceFromCollocationParameters();
+		concordanceFromCollocationParameters.setCollNum(1);
+		concordanceFromCollocationParameters.setContextQuery("[word=\"caricati\"]");
+		concordanceFromCollocationParameters.setRank(1);
+		concordanceFromCollocationParameters.setLeftContext("-5");
+		concordanceFromCollocationParameters.setRightContext("+5");
+		return concordanceFromCollocationParameters;
+	}
+
+	private DescResponse retrieveDescription(QueryRequest query, String corpusName) {
+		DescResponse descResponse = new DescResponse();
+
+		return descResponse;
 	}
 
 	private void executeQueryCollocation(String corpusName, QueryRequest queryRequest)
@@ -257,8 +288,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
-					.replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance =
+					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
 			Optional<Path> pathWordOptional = Files.list(cachePath)
 					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
 					.findFirst();
@@ -270,7 +301,8 @@ public class QueryExecutor {
 				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 
 				long now = System.currentTimeMillis();
-				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+				while (!concordance.finished()
+						|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 					Thread.sleep(5);
 				}
 				concordance.save(QueryExecutor.CACHE_DIR + corpusName + "/" + fileWordConcordance);
@@ -655,10 +687,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest()
-					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
-					.getCategory()
-					.contains(".")) {
+			if (queryRequest.getFrequencyQueryRequest().getIncludeCategoriesWithNoHits() && freqLimit == 0
+					&& queryRequest.getFrequencyQueryRequest().getCategory().contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {

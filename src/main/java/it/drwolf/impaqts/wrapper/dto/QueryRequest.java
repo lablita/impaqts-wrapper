@@ -16,6 +16,17 @@ public class QueryRequest {
 	private FrequencyQueryRequest frequencyQueryRequest;
 	private ContextConcordanceQueryRequest contextConcordanceQueryRequest;
 
+	private ConcordanceFromCollocationParameters concordanceFromCollocationParameters;
+
+	public ConcordanceFromCollocationParameters getConcordanceFromCollocationParameters() {
+		return concordanceFromCollocationParameters;
+	}
+
+	public void setConcordanceFromCollocationParameters(
+			ConcordanceFromCollocationParameters concordanceFromCollocationParameters) {
+		this.concordanceFromCollocationParameters = concordanceFromCollocationParameters;
+	}
+
 	public CollocationQueryRequest getCollocationQueryRequest() {
 		return this.collocationQueryRequest;
 	}
