@@ -671,7 +671,7 @@ public class QueryExecutor {
 				}
 			}
 		} else if (toBars[1] > 0F) {//text type
-			float maxrel = this.calculateMaxRel(freqs, norms, toBars);
+			float maxR = this.calculateMaxRel(freqs, norms, toBars);
 			for (int i = 0; i < words.size(); i++) {
 				if (freqs.get(i) <= wlMaxFreq) {
 					FrequencyResultLine frl = new FrequencyResultLine();
@@ -681,7 +681,7 @@ public class QueryExecutor {
 					frl.setNorm(norms.get(i));
 					frl.setnBar((int) (norms.get(i) * toBars[1]));
 					frl.setRelBar(
-							1 + (int) ((freqs.get(i) * toBars[0] * normWidth) / (norms.get(i) * toBars[1] * maxrel)));
+							1 + (int) ((freqs.get(i) * toBars[0] * normWidth) / (norms.get(i) * toBars[1] * maxR)));
 					frl.setNoRel(noRel);
 					frl.setFreqBar((normHeight * (freqs.get(i) + 1)) / (maxF + 1) + 1);
 					BigDecimal bd = new BigDecimal(((freqs.get(i) * toBars[0]) / (norms.get(i) * toBars[1]) * 100));
@@ -752,6 +752,8 @@ public class QueryExecutor {
 		}
 		end = end >= frequencyItemList.size() ? frequencyItemList.size() : end;
 		result.setItems(frequencyItemList.subList(start, end));
+		result.setMaxFreq(maxF);
+		result.setMaxRel(frlList.stream().map(frl -> frl.getRel()).max(Float::compareTo).get());
 		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
 		result.setTotal(frlList.size());
 		result.setHead(crit);

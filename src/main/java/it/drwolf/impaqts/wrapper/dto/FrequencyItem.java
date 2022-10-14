@@ -7,6 +7,9 @@ public class FrequencyItem {
 	private String head;
 	private int total;
 	private long totalFreq;
+	private long maxFreq;
+
+	private float maxRel;
 	private List<FrequencyResultLine> items = new ArrayList<>();
 
 	public String getHead() {
@@ -15,6 +18,14 @@ public class FrequencyItem {
 
 	public List<FrequencyResultLine> getItems() {
 		return this.items;
+	}
+
+	public long getMaxFreq() {
+		return this.maxFreq;
+	}
+
+	public float getMaxRel() {
+		return this.maxRel;
 	}
 
 	public int getTotal() {
@@ -31,6 +42,14 @@ public class FrequencyItem {
 
 	public void setItems(List<FrequencyResultLine> items) {
 		this.items = items;
+	}
+
+	public void setMaxFreq(long maxFreq) {
+		this.maxFreq = maxFreq;
+	}
+
+	public void setMaxRel(float maxRel) {
+		this.maxRel = maxRel;
 	}
 
 	public void setTotal(int total) {
