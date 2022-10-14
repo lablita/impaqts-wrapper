@@ -6,7 +6,7 @@ import java.util.List;
 public class QueryResponse {
 	private List<KWICLine> kwicLines = new ArrayList<>();
 	private List<CollocationItem> collocations = new ArrayList<>();
-	private List<FrequencyItem> frequencies = new ArrayList<>();
+	private FrequencyItem frequency = new FrequencyItem();
 	private List<DescResponse> descResponses = new ArrayList<>();
 	private Boolean inProgress = Boolean.TRUE;
 	private Integer currentSize;
@@ -24,8 +24,8 @@ public class QueryResponse {
 		return this.descResponses;
 	}
 
-	public List<FrequencyItem> getFrequencies() {
-		return this.frequencies;
+	public FrequencyItem getFrequency() {
+		return this.frequency;
 	}
 
 	public Boolean getInProgress() {
@@ -48,8 +48,12 @@ public class QueryResponse {
 		this.currentSize = currentSize;
 	}
 
-	public void setFrequencies(List<FrequencyItem> frequencies) {
-		this.frequencies = frequencies;
+	public void setDescResponses(List<DescResponse> descResponses) {
+		this.descResponses = descResponses;
+	}
+
+	public void setFrequency(FrequencyItem frequency) {
+		this.frequency = frequency;
 	}
 
 	public void setInProgress(Boolean inProgress) {

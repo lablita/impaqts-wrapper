@@ -213,7 +213,11 @@ public class QueryExecutor {
 			System.out.println(String.format("### WHILE %d", whileCount++));
 		}
 		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = this.getFakeConcordanceFromCollocationParameters();
-		concordance.set_collocation(concordanceFromCollocationParameters.getCollNum(), concordanceFromCollocationParameters.getContextQuery(), concordanceFromCollocationParameters.getLeftContext(), concordanceFromCollocationParameters.getRightContext(), concordanceFromCollocationParameters.getRank(), concordanceFromCollocationParameters.isExcludeKwic());
+		concordance.set_collocation(concordanceFromCollocationParameters.getCollNum(),
+				concordanceFromCollocationParameters.getContextQuery(),
+				concordanceFromCollocationParameters.getLeftContext(),
+				concordanceFromCollocationParameters.getRightContext(), concordanceFromCollocationParameters.getRank(),
+				concordanceFromCollocationParameters.isExcludeKwic());
 		count = concordance.size();
 		List<DescResponse> descResponses;
 		QueryResponse queryResponse = new QueryResponse();
@@ -253,22 +257,6 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
-	private ConcordanceFromCollocationParameters getFakeConcordanceFromCollocationParameters() {
-		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = new ConcordanceFromCollocationParameters();
-		concordanceFromCollocationParameters.setCollNum(1);
-		concordanceFromCollocationParameters.setContextQuery("[word=\"caricati\"]");
-		concordanceFromCollocationParameters.setRank(1);
-		concordanceFromCollocationParameters.setLeftContext("-5");
-		concordanceFromCollocationParameters.setRightContext("+5");
-		return concordanceFromCollocationParameters;
-	}
-
-	private DescResponse retrieveDescription(QueryRequest query, String corpusName) {
-		DescResponse descResponse = new DescResponse();
-
-		return descResponse;
-	}
-
 	private void executeQueryCollocation(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
@@ -288,8 +276,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			Optional<Path> pathWordOptional = Files.list(cachePath)
 					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
 					.findFirst();
@@ -301,8 +289,7 @@ public class QueryExecutor {
 				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 
 				long now = System.currentTimeMillis();
-				while (!concordance.finished()
-						|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 					Thread.sleep(5);
 				}
 				concordance.save(QueryExecutor.CACHE_DIR + corpusName + "/" + fileWordConcordance);
@@ -397,9 +384,8 @@ public class QueryExecutor {
 		frequencyOutput.setConcSize(concordance.size());
 
 		boolean ml = true;
-		queryResponse.setFrequencies(Arrays.asList(new FrequencyItem[] {
-				this.xfreqDist(concordance, corpus, queryRequest, start, end,
-						queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().size() > 0, 300, 0L) }));
+		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end,
+				queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().size() > 0, 300, 0L));
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
@@ -556,6 +542,16 @@ public class QueryExecutor {
 		return "[]";
 	}
 
+	private ConcordanceFromCollocationParameters getFakeConcordanceFromCollocationParameters() {
+		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = new ConcordanceFromCollocationParameters();
+		concordanceFromCollocationParameters.setCollNum(1);
+		concordanceFromCollocationParameters.setContextQuery("[word=\"caricati\"]");
+		concordanceFromCollocationParameters.setRank(1);
+		concordanceFromCollocationParameters.setLeftContext("-5");
+		concordanceFromCollocationParameters.setRightContext("+5");
+		return concordanceFromCollocationParameters;
+	}
+
 	private QueryTag getFirstTag(QueryRequest queryRequest) {
 		Map<String, String> result = new HashMap<>();
 		if (queryRequest.getQueryPattern().getTokPattern().isEmpty()) {
@@ -605,6 +601,12 @@ public class QueryExecutor {
 		}
 		res.append(ctx);
 		return res.toString();
+	}
+
+	private DescResponse retrieveDescription(QueryRequest query, String corpusName) {
+		DescResponse descResponse = new DescResponse();
+
+		return descResponse;
 	}
 
 	// recupera valori dei metadati che sono sui singoli documenti
@@ -687,8 +689,10 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest().getIncludeCategoriesWithNoHits() && freqLimit == 0
-					&& queryRequest.getFrequencyQueryRequest().getCategory().contains(".")) {
+			if (queryRequest.getFrequencyQueryRequest()
+					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
+					.getCategory()
+					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
