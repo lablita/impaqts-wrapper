@@ -20,6 +20,9 @@ public class QueryToken extends QueryElement {
 	public String getCql() {
 		String cql = "";
 		if (!this.tags.isEmpty()) {
+			if (this.tags.get(0).stream().filter(tag -> tag.getName().equals(QueryTag.CQL)).count() > 0) {
+				return this.tags.get(0).get(0).getValue();
+			}
 			if (this.tags.get(0).stream().filter(tag -> tag.getName().equals(QueryTag.PHRASE)).count() > 0) {
 				cql = this.tags.get(0).get(0).getCQLPhrase();
 			} else if (this.tags.get(0).stream().filter(tag -> tag.getName().equals(QueryTag.CHARACTER)).count() > 0) {

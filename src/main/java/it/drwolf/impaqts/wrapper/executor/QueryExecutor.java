@@ -205,6 +205,7 @@ public class QueryExecutor {
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
 		// un tempo minimo di esecuzione
 		boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
+
 		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int whileCount = 1;

@@ -53,7 +53,8 @@ public class MainWrapper implements Callable<Integer> {
 		QueryRequest qr = new QueryRequest();
 		if (this.json != null) {
 			try {
-				qr = this.objectMapper.readValue(this.json, new TypeReference<QueryRequest>() {
+				String jsonFormatted = this.json.replace("\\\\", "\\");
+				qr = this.objectMapper.readValue(jsonFormatted, new TypeReference<QueryRequest>() {
 				});
 			} catch (JsonProcessingException e) {
 				e.printStackTrace();
