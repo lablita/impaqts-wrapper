@@ -10,6 +10,15 @@ public class FrequencyLevelComparator implements Comparator<FrequencyResultLine>
 
 	@Override
 	public int compare(FrequencyResultLine o1, FrequencyResultLine o2) {
+		if (this.level<0) {
+			return -1;
+		}
+		if (o1==null || o1.getWord()==null || this.level>=o1.getWord().size()) {
+			return -1;
+		}
+		if (o2==null || o2.getWord()==null || this.level>=o2.getWord().size()) {
+			return 1;
+		}
 		return o1.getWord().get(this.level).compareTo(o2.getWord().get(this.level));
 	}
 

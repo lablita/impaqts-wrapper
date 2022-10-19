@@ -639,7 +639,8 @@ public class QueryExecutor {
 	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, QueryRequest queryRequest, int start,
 			int end, boolean multi, int normWidth, long wlMaxFreq) {
 		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
-		final String frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
+		final String frequencyType = queryRequest.getFrequencyQueryRequest().getFrequencyType();
+		final Integer frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
 		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
 		FrequencyItem result = new FrequencyItem();
 		StrVector words = new StrVector();
@@ -719,9 +720,9 @@ public class QueryExecutor {
 		}
 		//sorting
 		List<FrequencyResultLine> frequencyItemList;
-		if ("freq".equals(frequencyColSort) || "rel".equals(frequencyColSort)) {
+		if ("freq".equals(frequencyType) || "rel".equals(frequencyType)) {
 			if ("asc".equals(frequencyTypeSort)) {
-				frequencyItemList = "freq".equals(frequencyColSort) ?
+				frequencyItemList = "freq".equals(frequencyType) ?
 						frlList.stream()
 								.sorted(Comparator.comparing(FrequencyResultLine::getFreq))
 								.collect(Collectors.toList()) :
@@ -729,7 +730,7 @@ public class QueryExecutor {
 								.sorted(Comparator.comparing(FrequencyResultLine::getRel))
 								.collect(Collectors.toList());
 			} else {
-				frequencyItemList = "freq".equals(frequencyColSort) ?
+				frequencyItemList = "freq".equals(frequencyType) ?
 						frlList.stream()
 								.sorted(Comparator.comparing(FrequencyResultLine::getFreq).reversed())
 								.collect(Collectors.toList()) :
@@ -740,11 +741,11 @@ public class QueryExecutor {
 		} else {
 			if ("asc".equals(frequencyTypeSort)) {
 				FrequencyLevelComparator frequencyLevelComparator = new FrequencyLevelComparator();
-				frequencyLevelComparator.setLevel(Integer.parseInt("0"));
+				frequencyLevelComparator.setLevel(frequencyColSort);
 				frequencyItemList = frlList.stream().sorted(frequencyLevelComparator).collect(Collectors.toList());
 			} else {
 				FrequencyLevelComparator frequencyLevelComparator = new FrequencyLevelComparator();
-				frequencyLevelComparator.setLevel(Integer.parseInt("0"));
+				frequencyLevelComparator.setLevel(frequencyColSort);
 				frequencyItemList = frlList.stream()
 						.sorted(frequencyLevelComparator.reversed())
 						.collect(Collectors.toList());
