@@ -1,7 +1,5 @@
 package it.drwolf.impaqts.wrapper.query;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import java.util.List;
 
 // rappresenta un token in CQL: ciò che c'è tra quadre: []
@@ -19,21 +17,32 @@ public class QueryToken extends QueryElement {
 	}
 
 	@Override
-    @JsonIgnore
 	public String getCql() {
-		String cql = "[";
+		String cql = "";
 		if (!this.tags.isEmpty()) {
-			for (List<QueryTag> andList : this.tags) {
-				cql += "(";
-				for (QueryTag orEl : andList) {
-					cql += orEl.getCql() + " | ";
-				}
-				cql = cql.substring(0, cql.length() - 3) + ")";
-				cql += " & ";
+			if (this.tags.get(0).stream().filter(tag -> tag.getName().equals(QueryTag.CQL)).count() > 0) {
+				return this.tags.get(0).get(0).getValue();
 			}
-			cql = cql.substring(0, cql.length() - 3);
+			if (this.tags.get(0).stream().filter(tag -> tag.getName().equals(QueryTag.PHRASE)).count() > 0) {
+				cql = this.tags.get(0).get(0).getCQLPhrase();
+			} else if (this.tags.get(0).stream().filter(tag -> tag.getName().equals(QueryTag.CHARACTER)).count() > 0) {
+				cql = this.tags.get(0).get(0).getCQLCharacter();
+			} else {
+				cql = "[";
+				for (List<QueryTag> andList : this.tags) {
+					cql += "(";
+					for (QueryTag orEl : andList) {
+						cql += orEl.getCql() + " | ";
+					}
+					cql = cql.substring(0, cql.length() - 3) + ")";
+					cql += " & ";
+				}
+				cql = cql.substring(0, cql.length() - 3);
+				cql = cql + "]";
+			}
+		} else {
+			cql = "[]";
 		}
-		cql = cql + "]";
 		if (this.minRepetitions != 1 || this.maxRepetitions != 1) {
 			cql = cql + "{" + this.minRepetitions + "," + this.maxRepetitions + "}";
 		} else if (this.optional) {

@@ -2,15 +2,33 @@ package it.drwolf.impaqts.wrapper.dto;
 
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 
-// String, Integer, Boolean
 public class QueryRequest {
 	private String corpusMetadatum;
 	private Integer start = 0;
 	private Integer end = 0;
+	private String word;
 	private String corpus;
 	private String cql;
 	private boolean queryInCql = false;
 	private QueryPattern queryPattern;
+	private CollocationQueryRequest collocationQueryRequest;
+	private SortQueryRequest sortQueryRequest;
+	private FrequencyQueryRequest frequencyQueryRequest;
+	private ContextConcordanceQueryRequest contextConcordanceQueryRequest;
+
+	private ConcordanceFromCollocationParameters concordanceFromCollocationParameters;
+
+	public CollocationQueryRequest getCollocationQueryRequest() {
+		return this.collocationQueryRequest;
+	}
+
+	public ConcordanceFromCollocationParameters getConcordanceFromCollocationParameters() {
+		return concordanceFromCollocationParameters;
+	}
+
+	public ContextConcordanceQueryRequest getContextConcordanceQueryRequest() {
+		return this.contextConcordanceQueryRequest;
+	}
 
 	public String getCorpus() {
 		return this.corpus;
@@ -28,6 +46,10 @@ public class QueryRequest {
 		return this.end;
 	}
 
+	public FrequencyQueryRequest getFrequencyQueryRequest() {
+		return this.frequencyQueryRequest;
+	}
+
 	public boolean getQueryInCql() {
 		return this.queryInCql;
 	}
@@ -36,12 +58,33 @@ public class QueryRequest {
 		return this.queryPattern;
 	}
 
+	public SortQueryRequest getSortQueryRequest() {
+		return this.sortQueryRequest;
+	}
+
 	public Integer getStart() {
 		return this.start;
 	}
 
+	public String getWord() {
+		return this.word;
+	}
+
 	public boolean isQueryInCql() {
 		return this.queryInCql;
+	}
+
+	public void setCollocationQueryRequest(CollocationQueryRequest collocationQueryRequest) {
+		this.collocationQueryRequest = collocationQueryRequest;
+	}
+
+	public void setConcordanceFromCollocationParameters(
+			ConcordanceFromCollocationParameters concordanceFromCollocationParameters) {
+		this.concordanceFromCollocationParameters = concordanceFromCollocationParameters;
+	}
+
+	public void setContextConcordanceQueryRequest(ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
+		this.contextConcordanceQueryRequest = contextConcordanceQueryRequest;
 	}
 
 	public void setCorpus(String corpus) {
@@ -60,6 +103,10 @@ public class QueryRequest {
 		this.end = end;
 	}
 
+	public void setFrequencyQueryRequest(FrequencyQueryRequest frequencyQueryRequest) {
+		this.frequencyQueryRequest = frequencyQueryRequest;
+	}
+
 	public void setQueryInCql(boolean queryInCql) {
 		this.queryInCql = queryInCql;
 	}
@@ -68,7 +115,15 @@ public class QueryRequest {
 		this.queryPattern = queryPattern;
 	}
 
+	public void setSortQueryRequest(SortQueryRequest sortQueryRequest) {
+		this.sortQueryRequest = sortQueryRequest;
+	}
+
 	public void setStart(Integer start) {
 		this.start = start;
+	}
+
+	public void setWord(String word) {
+		this.word = word;
 	}
 }

@@ -1,9 +1,17 @@
 package it.drwolf.impaqts.wrapper.query;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 // rappresenta la coppia <nome, valore> che è il filtro di ricerca (es. word="casa" oppure pos="VER.*")
 public class QueryTag {
+	public final static String LEMMA = "lemma";
+	public final static String PHRASE = "phrase";
+	public final static String WORD = "word";
+	public final static String CHARACTER = "character";
+
+	public final static String CQL = "cql";
 	// menu a tendina sopra il testo
 	String name; // nome del tag (es. pos, lemma, ...)
 	// il testo inserito da cercare
@@ -15,6 +23,8 @@ public class QueryTag {
 	boolean containsValue = false; // il tag deve contenere value
 	boolean matchCase = true; // il valore non ignora maiuscole/minuscole
 	boolean negation = false; // il token è != e non =
+
+	String defaultAttributeCQL;
 
 	public QueryTag() {
 
@@ -35,12 +45,30 @@ public class QueryTag {
 		this.structure = structure;
 	}
 
+	public String getCQLCharacter() {
+		String cql = "[" + QueryTag.WORD + "=\".*" + this.value + ".*\"]";
+		return cql;
+	}
+
+	public String getCQLPhrase() {
+		String[] valueArray = this.value.split(" ");
+		List<String> cqlList = new ArrayList<>();
+		for (String value : valueArray) {
+			//come su bonito
+			//cqlList.add("[" + QueryTag.WORD + "=\"(?i)" + value + "\"]");
+
+			//come su http://corpora.dipartimentidieccellenza-dilef.unifi.it/
+			cqlList.add("[" + QueryTag.WORD + "=\"" + value + "\"]");
+		}
+		return cqlList.stream().collect(Collectors.joining(" "));
+	}
+
 	public boolean getContainsValue() {
 		return this.containsValue;
 	}
 
-	@JsonIgnore
 	public String getCql() {
+
 		String val = this.value;
 		if (this.containsValue) {
 			val = ".*" + val + ".*";
@@ -60,6 +88,11 @@ public class QueryTag {
 			return this.structure + " " + this.name + op + "\"" + val + "\"";
 		}
 		return this.name + op + "\"" + val + "\"";
+
+	}
+
+	public String getDefaultAttributeCQL() {
+		return this.defaultAttributeCQL;
 	}
 
 	public boolean getEndsWithValue() {
@@ -92,6 +125,10 @@ public class QueryTag {
 
 	public void setContainsValue(boolean x) {
 		this.containsValue = x;
+	}
+
+	public void setDefaultAttributeCQL(String defaultAttributeCQL) {
+		this.defaultAttributeCQL = defaultAttributeCQL;
 	}
 
 	public void setEndsWithValue(boolean x) {
