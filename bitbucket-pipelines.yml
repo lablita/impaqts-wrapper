@@ -20,6 +20,6 @@ pipelines:
             - pipe: atlassian/scp-deploy:1.2.1
               variables:
                 USER: 'drwolf'
-                SERVER: 'impaqts-be.cloudvm.it'
+                SERVER: 'impaqts.cloudvm.it'
                 REMOTE_PATH: '/home/drwolf/wrapper/ImpaqtsWrapper-jar-with-dependencies.jar'
                 LOCAL_PATH: '${BITBUCKET_CLONE_DIR}/target/ImpaqtsWrapper-jar-with-dependencies.jar'
