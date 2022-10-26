@@ -199,6 +199,7 @@ fabric.properties
 
 # Package Files #
 *.jar
+!manatee-jni-1.0-SNAPSHOT.jar
 *.war
 *.nar
 *.ear
