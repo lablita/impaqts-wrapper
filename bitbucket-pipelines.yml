@@ -34,8 +34,10 @@ pipelines:
             - maven
           script:
             - mvn clean compile package
-            - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            - DOMAIN_ORIGIN_REGISTRY=$(aws cloudfront get-distribution --id E263CTGMHO0P4P --query 'Distribution.DistributionConfig.Origins.Items[?Id==`impaqts-be.cloudvw.it`].DomainName' --output text)
-            - "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ./target/ImpaqtsWrapper-jar-with-dependencies.jar drwolf@${DOMAIN_ORIGIN_REGISTRY}:./wrapper/ImpaqtsWrapper-jar-with-dependencies.jar"
+            - pipe: atlassian/scp-deploy:1.2.1
+              variables:
+                USER: 'drwolf'
+                SERVER: 'impaqts-be.cloudvm.it'
+                REMOTE_PATH: '/home/drwolf/wrapper/ImpaqtsWrapper-jar-with-dependencies.jar'
+                LOCAL_PATH: '${BITBUCKET_CLONE_DIR}/target/ImpaqtsWrapper-jar-with-dependencies.jar'
         
