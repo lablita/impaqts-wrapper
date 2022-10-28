@@ -16,6 +16,7 @@ public class QueryRequest {
 	private FrequencyQueryRequest frequencyQueryRequest;
 	private ContextConcordanceQueryRequest contextConcordanceQueryRequest;
 
+	private WideContextRequest wideContextRequest;
 	private ConcordanceFromCollocationParameters concordanceFromCollocationParameters;
 
 	public CollocationQueryRequest getCollocationQueryRequest() {
@@ -64,6 +65,10 @@ public class QueryRequest {
 
 	public Integer getStart() {
 		return this.start;
+	}
+
+	public WideContextRequest getWideContextRequest() {
+		return wideContextRequest;
 	}
 
 	public String getWord() {
@@ -121,6 +126,10 @@ public class QueryRequest {
 
 	public void setStart(Integer start) {
 		this.start = start;
+	}
+
+	public void setWideContextRequest(WideContextRequest wideContextRequest) {
+		this.wideContextRequest = wideContextRequest;
 	}
 
 	public void setWord(String word) {

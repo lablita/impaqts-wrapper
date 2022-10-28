@@ -12,6 +12,8 @@ public class QueryResponse {
 	private Integer currentSize;
 	private List<String> metadataValues = new ArrayList<>();
 
+	private WideContextResponse wideContextResponse = new WideContextResponse();
+
 	public List<CollocationItem> getCollocations() {
 		return this.collocations;
 	}
@@ -40,6 +42,10 @@ public class QueryResponse {
 		return this.metadataValues;
 	}
 
+	public WideContextResponse getWideContextResponse() {
+		return wideContextResponse;
+	}
+
 	public void setCollocations(List<CollocationItem> collocations) {
 		this.collocations = collocations;
 	}
@@ -66,5 +72,9 @@ public class QueryResponse {
 
 	public void setMetadataValues(List<String> metadataValues) {
 		this.metadataValues = metadataValues;
+	}
+
+	public void setWideContextResponse(WideContextResponse wideContextResponse) {
+		this.wideContextResponse = wideContextResponse;
 	}
 }

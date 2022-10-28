@@ -11,6 +11,7 @@ public class KWICLine {
 	private List<String> leftContext;
 	private String kwic;
 	private List<String> rightContext;
+	private Long pos;
 
 	public KWICLine(String ref, List<String> leftContext, String kwic, List<String> rightContext) {
 		this.ref = ref;
@@ -24,6 +25,7 @@ public class KWICLine {
 		this.leftContext = kwicLines.get_left();
 		this.rightContext = kwicLines.get_right();
 		this.kwic = ContextUtils.strip_tags(kwicLines.get_kwic());
+		this.pos = kwicLines.get_pos();
 	}
 
 	@Override
@@ -48,6 +50,10 @@ public class KWICLine {
 		return this.leftContext;
 	}
 
+	public Long getPos() {
+		return pos;
+	}
+
 	public String getRef() {
 		return this.ref;
 	}
@@ -67,6 +73,10 @@ public class KWICLine {
 
 	public void setLeftContext(List<String> leftContext) {
 		this.leftContext = leftContext;
+	}
+
+	public void setPos(Long pos) {
+		this.pos = pos;
 	}
 
 	public void setRef(String ref) {

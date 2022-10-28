@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sketchengine.manatee.CollocItems;
 import com.sketchengine.manatee.Concordance;
+import com.sketchengine.manatee.CorpRegion;
 import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.IntVector;
 import com.sketchengine.manatee.KWICLines;
@@ -25,11 +26,13 @@ import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.dto.TokenClassDTO;
+import it.drwolf.impaqts.wrapper.dto.WideContextRequest;
 import it.drwolf.impaqts.wrapper.exceptions.TagPresentException;
 import it.drwolf.impaqts.wrapper.exceptions.TokenPresentException;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 import it.drwolf.impaqts.wrapper.query.QueryTag;
 import it.drwolf.impaqts.wrapper.query.QueryToken;
+import it.drwolf.impaqts.wrapper.utils.ContextUtils;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -44,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class QueryExecutor {
@@ -58,8 +62,7 @@ public class QueryExecutor {
 	public static final String LEFT_CONTEXT = "LEFT_CONTEXT";
 	public static final String RIGHT_CONTEXT = "RIGHT_CONTEXT";
 	public static final String NODE_CONTEXT = "NODE_CONTEXT";
-	public static final String CACHE_FILE = "/tmp/cache/coliweb/wordfinlandial.conc";
-	public static final String CACHE_DIR = "/tmp/cache/";
+	public String cacheDir = "/tmp/cache/";
 	public static final String EXT_CONC = ".conc";
 	private static final Integer MINIMUM_EXECUTION_TIME = 100;
 	private final ObjectMapper objectMapper;
@@ -95,7 +98,8 @@ public class QueryExecutor {
 		this.put("NONE", "N");
 	}};
 
-	public QueryExecutor() {
+	public QueryExecutor(final String cacheDir) {
+		this.cacheDir = cacheDir;
 		this.objectMapper = new ObjectMapper();
 	}
 
@@ -196,7 +200,6 @@ public class QueryExecutor {
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
 		final Concordance concordance = new Concordance();
-		//		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int count = 0;
 		int requestedSize = end - start;
 		long now = System.currentTimeMillis();
@@ -213,12 +216,6 @@ public class QueryExecutor {
 			Thread.sleep(50);
 			System.out.println(String.format("### WHILE %d", whileCount++));
 		}
-		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = this.getFakeConcordanceFromCollocationParameters();
-		concordance.set_collocation(concordanceFromCollocationParameters.getCollNum(),
-				concordanceFromCollocationParameters.getContextQuery(),
-				concordanceFromCollocationParameters.getLeftContext(),
-				concordanceFromCollocationParameters.getRightContext(), concordanceFromCollocationParameters.getRank(),
-				concordanceFromCollocationParameters.isExcludeKwic());
 		count = concordance.size();
 		List<DescResponse> descResponses;
 		QueryResponse queryResponse = new QueryResponse();
@@ -248,6 +245,7 @@ public class QueryExecutor {
 			sentKwicLines.addAll(kwicLines);
 		}
 		queryResponse.setInProgress(!concordance.finished());
+
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
 		Thread.sleep(5);
 		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
@@ -269,16 +267,16 @@ public class QueryExecutor {
 		QueryTag queryTag = this.getFirstTag(queryRequest);
 		if (queryTag.getValue() != null) {
 			Concordance concordance = null;
-			Path cachePath = Paths.get(QueryExecutor.CACHE_DIR);
+			Path cachePath = Paths.get(this.cacheDir);
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			cachePath = Paths.get(QueryExecutor.CACHE_DIR + corpusName + "/");
+			cachePath = Paths.get(this.cacheDir + corpusName + "/");
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
-					.replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance =
+					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
 			Optional<Path> pathWordOptional = Files.list(cachePath)
 					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
 					.findFirst();
@@ -290,11 +288,11 @@ public class QueryExecutor {
 				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 
 				long now = System.currentTimeMillis();
-				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+				while (!concordance.finished()
+						|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 					Thread.sleep(5);
 				}
-				concordance.save(QueryExecutor.CACHE_DIR + corpusName + "/" + fileWordConcordance);
-
+				concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
 			}
 			concordance.sync();
 			CollocItems collocItems = new CollocItems(concordance,
@@ -543,18 +541,7 @@ public class QueryExecutor {
 		return "[]";
 	}
 
-	private ConcordanceFromCollocationParameters getFakeConcordanceFromCollocationParameters() {
-		ConcordanceFromCollocationParameters concordanceFromCollocationParameters = new ConcordanceFromCollocationParameters();
-		concordanceFromCollocationParameters.setCollNum(1);
-		concordanceFromCollocationParameters.setContextQuery("[word=\"caricati\"]");
-		concordanceFromCollocationParameters.setRank(1);
-		concordanceFromCollocationParameters.setLeftContext("-5");
-		concordanceFromCollocationParameters.setRightContext("+5");
-		return concordanceFromCollocationParameters;
-	}
-
 	private QueryTag getFirstTag(QueryRequest queryRequest) {
-		Map<String, String> result = new HashMap<>();
 		if (queryRequest.getQueryPattern().getTokPattern().isEmpty()) {
 			throw new TokenPresentException("no token present");
 		} else {
@@ -572,7 +559,10 @@ public class QueryExecutor {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
-				if (queryRequest.getSortQueryRequest() != null) {
+				if (queryRequest.getWideContextRequest() != null
+						&& queryRequest.getWideContextRequest().getPos() != null) {
+					this.executeWideContextQuery(queryRequest.getWideContextRequest());
+				} else if (queryRequest.getSortQueryRequest() != null) {
 					//sorting
 					this.executeQuerySort(corpus, queryRequest);
 				} else if (queryRequest.getCollocationQueryRequest() != null) {
@@ -589,6 +579,29 @@ public class QueryExecutor {
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void executeWideContextQuery(WideContextRequest wideContextRequest) throws JsonProcessingException {
+		System.out.println(String.format("### 1. Wide context: %s %d %d", wideContextRequest.getCorpusName(),
+				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
+		final Corpus corpus = new Corpus(wideContextRequest.getCorpusName());
+		CorpRegion corpRegion = new CorpRegion(corpus, "word", "p,g,err,corr");
+		final Long pos = wideContextRequest.getPos();
+		StrVector leftRegion = corpRegion.region(pos - 40, pos);
+		final Integer hitlen = wideContextRequest.getHitlen();
+		StrVector kwicRegion = corpRegion.region(pos, pos + hitlen);
+		StrVector rightRegion = corpRegion.region(pos + hitlen, pos + hitlen + 40);
+		String leftContext = leftRegion.stream().collect(Collectors.joining(" "));
+		String kwicContext = kwicRegion.stream().collect(Collectors.joining(" "));
+		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.getWideContextResponse().setLeftContext(ContextUtils.removeContextTags(leftContext));
+		queryResponse.getWideContextResponse().setKwic(ContextUtils.removeContextTags(kwicContext));
+		queryResponse.getWideContextResponse().setRightContext(ContextUtils.removeContextTags(rightContext));
+		queryResponse.setInProgress(false);
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+		System.out.println(String.format("### 2. Finished Wide context: %s %d %d", wideContextRequest.getCorpusName(),
+				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
 	}
 
 	private String oneLevelCrit(String prefix, String attr, String ctx, String pos, String fcode, String icase,
@@ -691,10 +704,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest()
-					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
-					.getCategory()
-					.contains(".")) {
+			if (queryRequest.getFrequencyQueryRequest().getIncludeCategoriesWithNoHits() && freqLimit == 0
+					&& queryRequest.getFrequencyQueryRequest().getCategory().contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {

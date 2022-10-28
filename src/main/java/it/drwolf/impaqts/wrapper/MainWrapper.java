@@ -29,6 +29,8 @@ public class MainWrapper implements Callable<Integer> {
 	String cql;
 	@CommandLine.Option(names = { "-j", "--json" }, description = "Query request in json format")
 	String json;
+	@CommandLine.Option(names = { "-d", "--cache-dir" }, description = "Cache dir path")
+	String cacheDir;
 	@CommandLine.Option(names = { "-m",
 			"--corpusmetadata" }, description = "Retrieve corpus metadata. Specify first or second level attribute (eg. doc.file)")
 	String corpusMetadata;
@@ -49,7 +51,7 @@ public class MainWrapper implements Callable<Integer> {
 		this.checkEnvironmentVariables();
 		this.loadJNI();
 		this.validate();
-		QueryExecutor queryExecutor = new QueryExecutor();
+		QueryExecutor queryExecutor = new QueryExecutor(this.cacheDir);
 		QueryRequest qr = new QueryRequest();
 		if (this.json != null) {
 			try {
