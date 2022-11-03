@@ -13,7 +13,6 @@ import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
-import it.drwolf.impaqts.wrapper.dto.ConcordanceFromCollocationParameters;
 import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.DescResponse;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
@@ -47,7 +46,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class QueryExecutor {
@@ -67,40 +65,43 @@ public class QueryExecutor {
 	private static final Integer MINIMUM_EXECUTION_TIME = 100;
 	private final ObjectMapper objectMapper;
 
-	private final Map<Character, String> STAT_DESC = new HashMap<Character, String>() {{
-		this.put('t', "T-score");
-		this.put('m', "MI");
-		this.put('3', "MI3");
-		this.put('l', "log likelihood");
-		this.put('s', "min. sensitivity");
-		this.put('p', "MI.log_f");
-		this.put('r', "relative freq.");
-		this.put('f', "absolute freq.");
-		this.put('d', "logDice");
-	}};
+	private final Map<Character, String> STAT_DESC = new HashMap<>();
 
-	private final Map<String, String> COLLOCATIONS_ATTIBUTE = new HashMap<String, String>() {{
-		this.put("WORD", "word");
-		this.put("TAG", "tag");
-		this.put("LEMMA", "lemma");
-	}};
+	private final Map<String, String> collocationsAttributes = new HashMap<>();
 
-	private final Map<String, String> FROM_CODE = new HashMap<String, String>() {{
-		this.put("lc", "<0>");
-		this.put("rc", ">0");
-		this.put("kl", "<0");
-		this.put("kr", ">0");
-	}};
+	private final Map<String, String> fromCodes = new HashMap<>();
 
-	private final Map<String, String> CONTEXT_CONCORDANCE = new HashMap<String, String>() {{
-		this.put("ALL", "P");
-		this.put("ANY", "P");
-		this.put("NONE", "N");
-	}};
+	private final Map<String, String> contextConcordances = new HashMap<>();
 
 	public QueryExecutor(final String cacheDir) {
 		this.cacheDir = cacheDir;
 		this.objectMapper = new ObjectMapper();
+		this.initMaps();
+	}
+
+	private void initMaps() {
+		this.STAT_DESC.put('t', "T-score");
+		this.STAT_DESC.put('m', "MI");
+		this.STAT_DESC.put('3', "MI3");
+		this.STAT_DESC.put('l', "log likelihood");
+		this.STAT_DESC.put('s', "min. sensitivity");
+		this.STAT_DESC.put('p', "MI.log_f");
+		this.STAT_DESC.put('r', "relative freq.");
+		this.STAT_DESC.put('f', "absolute freq.");
+		this.STAT_DESC.put('d', "logDice");
+
+		this.collocationsAttributes.put("WORD", "word");
+		this.collocationsAttributes.put("TAG", "tag");
+		this.collocationsAttributes.put("LEMMA", "lemma");
+
+		this.fromCodes.put("lc", "<0>");
+		this.fromCodes.put("rc", ">0");
+		this.fromCodes.put("kl", "<0");
+		this.fromCodes.put("kr", ">0");
+
+		this.contextConcordances.put("ALL", "P");
+		this.contextConcordances.put("ANY", "P");
+		this.contextConcordances.put("NONE", "N");
 	}
 
 	private float calculateMaxRel(NumVector freqs, NumVector norms, float[] toBars) {
@@ -120,14 +121,14 @@ public class QueryExecutor {
 	}
 
 	private float[] computeCorrection(NumVector freqs, NumVector norms, int normWidth, Corpus corpus) {
-		long maxFreq = freqs.stream().max(Long::compareTo).get();
-		long maxNorm = norms.stream().max(Long::compareTo).get();
+		long maxFreq = freqs.stream().max(Long::compareTo).orElse(1L);
+		long maxNorm = norms.stream().max(Long::compareTo).orElse(1L);
 		if (norms.stream().reduce(0L, Long::sum) <= 0L) {
 			return new float[] { normWidth / maxFreq, 0L };
 		} else {
 			List<String> sizes = Arrays.asList(corpus.get_sizes().split("\n"));
-			String normSumStr = sizes.stream().filter(item -> item.contains("normsum")).findFirst().get();
-			String wordCountStr = sizes.stream().filter(item -> item.contains("wordcount")).findFirst().get();
+			String normSumStr = sizes.stream().filter(item -> item.contains("normsum")).findFirst().orElse("");
+			String wordCountStr = sizes.stream().filter(item -> item.contains("wordcount")).findFirst().orElse("");
 			long normSum = Long.parseLong(normSumStr.substring(normSumStr.indexOf(" ") + 1));
 			long wordCount = Long.parseLong(wordCountStr.substring(wordCountStr.indexOf(" ") + 1));
 			long sumN = normSum > 0 ? normSum : (wordCount > 0 ? wordCount : corpus.size());
@@ -284,9 +285,8 @@ public class QueryExecutor {
 				concordance = new Concordance(corpus, pathWordOptional.get().toString());
 			} else {
 				concordance = new Concordance();
-				//al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
+				// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
 				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
-
 				long now = System.currentTimeMillis();
 				while (!concordance.finished()
 						|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
@@ -296,7 +296,7 @@ public class QueryExecutor {
 			}
 			concordance.sync();
 			CollocItems collocItems = new CollocItems(concordance,
-					this.COLLOCATIONS_ATTIBUTE.get(collocationQueryRequest.getAttribute()),
+					this.collocationsAttributes.get(collocationQueryRequest.getAttribute()),
 					collocationQueryRequest.getSortBy() != null ? collocationQueryRequest.getSortBy().charAt(0) : 'm',
 					collocationQueryRequest.getMinFreqCorpus(), collocationQueryRequest.getMinFreqRange(),
 					collocationQueryRequest.getRangeFrom(), collocationQueryRequest.getRangeTo(), end);
@@ -554,7 +554,7 @@ public class QueryExecutor {
 	}
 
 	// chiamata a metodo getCQLfromqueryrequest che trasforma i dati di input in stringa cql
-	public void manageQueryRequest(String corpus, QueryRequest queryRequest) {
+	public void manageQueryRequest(String corpus, QueryRequest queryRequest) throws IOException, InterruptedException {
 		try {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
@@ -578,6 +578,7 @@ public class QueryExecutor {
 			}
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
+			throw e;
 		}
 	}
 
@@ -609,7 +610,7 @@ public class QueryExecutor {
 		StringBuilder res = new StringBuilder("");
 		res.append(String.format("%s%s/%s%s%s", prefix, attr, icase, bward, empty));
 		if (ctx.isEmpty()) {
-			ctx = String.format("%s%s", pos, this.FROM_CODE.get(fcode));
+			ctx = String.format("%s%s", pos, this.fromCodes.get(fcode));
 		} else if (ctx.contains("~") && attr.contains(".")) {
 			ctx = ctx.split("~")[0];
 		}
@@ -670,7 +671,7 @@ public class QueryExecutor {
 		float[] toBars = this.computeCorrection(freqs, norms, normWidth, corpus);
 		int noRel = multi ? 1 : 0;
 		int normHeight = 15;
-		long maxF = freqs.stream().max(Long::compareTo).get();
+		long maxF = freqs.stream().max(Long::compareTo).orElse(0L);
 		wlMaxFreq = wlMaxFreq > 0 ? wlMaxFreq : maxF;
 
 		if (multi) {//multilevel
@@ -695,10 +696,10 @@ public class QueryExecutor {
 					frl.setNorm(norms.get(i));
 					frl.setnBar((int) (norms.get(i) * toBars[1]));
 					frl.setRelBar(
-							1 + (int) ((freqs.get(i) * toBars[0] * normWidth) / (norms.get(i) * toBars[1] * maxR)));
+							1L + (int) ((freqs.get(i) * toBars[0] * normWidth) / (norms.get(i) * toBars[1] * maxR)));
 					frl.setNoRel(noRel);
 					frl.setFreqBar((normHeight * (freqs.get(i) + 1)) / (maxF + 1) + 1);
-					BigDecimal bd = new BigDecimal(((freqs.get(i) * toBars[0]) / (norms.get(i) * toBars[1]) * 100));
+					BigDecimal bd = BigDecimal.valueOf(((freqs.get(i) * toBars[0]) / (norms.get(i) * toBars[1]) * 100));
 					bd = bd.setScale(1, RoundingMode.HALF_UP);
 					frl.setRel(bd.floatValue());
 					frlList.add(frl);
@@ -765,7 +766,7 @@ public class QueryExecutor {
 		end = end >= frequencyItemList.size() ? frequencyItemList.size() : end;
 		result.setItems(frequencyItemList.subList(start, end));
 		result.setMaxFreq(maxF);
-		result.setMaxRel(frlList.stream().map(frl -> frl.getRel()).max(Float::compareTo).get());
+		result.setMaxRel(frlList.stream().map(FrequencyResultLine::getRel).max(Float::compareTo).orElse(0.0f));
 		result.setTotalFreq(freqs.stream().reduce(0L, Long::sum));
 		result.setTotal(frlList.size());
 		result.setHead(crit);

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +58,14 @@ public class QueryExecutorTest {
 		qr.setCql("[word=\"il\"]");
 		qr.setStart(0);
 		qr.setEnd(10);
-		QueryExecutor qe = new QueryExecutor();
-		qe.manageQueryRequest(QueryExecutorTest.CORPUS_NAME, qr);
+		QueryExecutor qe = new QueryExecutor("/tmp/cache/");
+		try {
+			qe.manageQueryRequest(QueryExecutorTest.CORPUS_NAME, qr);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 		String output = this.outContent.toString();
 		Assertions.assertNotNull("Output should not be null", output);
 		String[] lines = output.split("\n");
@@ -85,8 +92,14 @@ public class QueryExecutorTest {
 		qr.setCql("[word=\"the\"]");
 		qr.setStart(0);
 		qr.setEnd(10);
-		QueryExecutor qe = new QueryExecutor();
-		qe.manageQueryRequest(QueryExecutorTest.CORPUS_NAME, qr);
+		QueryExecutor qe = new QueryExecutor("/tmp/cache/");
+		try {
+			qe.manageQueryRequest(QueryExecutorTest.CORPUS_NAME, qr);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 		String output = this.outContent.toString();
 		Assertions.assertNotNull("Output should not be null", output);
 		String[] lines = output.split("\n");
