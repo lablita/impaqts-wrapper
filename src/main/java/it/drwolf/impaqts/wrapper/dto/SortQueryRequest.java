@@ -11,6 +11,8 @@ public class SortQueryRequest {
 	private Boolean backward;
 	private List<SortOption> multilevelSort = new ArrayList<>();
 
+	private Boolean multilevel;
+
 	public String getAttribute() {
 		return this.attribute;
 	}
@@ -21,6 +23,10 @@ public class SortQueryRequest {
 
 	public Boolean getIgnoreCase() {
 		return this.ignoreCase;
+	}
+
+	public Boolean getMultilevel() {
+		return this.multilevel;
 	}
 
 	public List<SortOption> getMultilevelSort() {
@@ -45,6 +51,10 @@ public class SortQueryRequest {
 
 	public void setIgnoreCase(Boolean ignoreCase) {
 		this.ignoreCase = ignoreCase;
+	}
+
+	public void setMultilevel(Boolean multilevel) {
+		this.multilevel = multilevel;
 	}
 
 	public void setMultilevelSort(List<SortOption> multilevelSort) {

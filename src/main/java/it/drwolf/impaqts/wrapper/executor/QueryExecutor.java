@@ -13,7 +13,6 @@ import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
-import it.drwolf.impaqts.wrapper.dto.ConcordanceFromCollocationParameters;
 import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.DescResponse;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
@@ -47,7 +46,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class QueryExecutor {
@@ -62,12 +60,10 @@ public class QueryExecutor {
 	public static final String LEFT_CONTEXT = "LEFT_CONTEXT";
 	public static final String RIGHT_CONTEXT = "RIGHT_CONTEXT";
 	public static final String NODE_CONTEXT = "NODE_CONTEXT";
-	public String cacheDir = "/tmp/cache/";
 	public static final String EXT_CONC = ".conc";
 	private static final Integer MINIMUM_EXECUTION_TIME = 100;
 	private final ObjectMapper objectMapper;
-
-	private final Map<Character, String> STAT_DESC = new HashMap<Character, String>() {{
+	private final Map<Character, String> STAT_DESC = new HashMap<>() {{
 		this.put('t', "T-score");
 		this.put('m', "MI");
 		this.put('3', "MI3");
@@ -78,25 +74,23 @@ public class QueryExecutor {
 		this.put('f', "absolute freq.");
 		this.put('d', "logDice");
 	}};
-
-	private final Map<String, String> COLLOCATIONS_ATTIBUTE = new HashMap<String, String>() {{
+	private final Map<String, String> COLLOCATIONS_ATTIBUTE = new HashMap<>() {{
 		this.put("WORD", "word");
 		this.put("TAG", "tag");
 		this.put("LEMMA", "lemma");
 	}};
-
-	private final Map<String, String> FROM_CODE = new HashMap<String, String>() {{
+	private final Map<String, String> FROM_CODE = new HashMap<>() {{
 		this.put("lc", "<0>");
 		this.put("rc", ">0");
 		this.put("kl", "<0");
 		this.put("kr", ">0");
 	}};
-
-	private final Map<String, String> CONTEXT_CONCORDANCE = new HashMap<String, String>() {{
+	private final Map<String, String> CONTEXT_CONCORDANCE = new HashMap<>() {{
 		this.put("ALL", "P");
 		this.put("ANY", "P");
 		this.put("NONE", "N");
 	}};
+	public String cacheDir = "/tmp/cache/";
 
 	public QueryExecutor(final String cacheDir) {
 		this.cacheDir = cacheDir;
@@ -275,8 +269,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			Optional<Path> pathWordOptional = Files.list(cachePath)
 					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
 					.findFirst();
@@ -288,8 +282,7 @@ public class QueryExecutor {
 				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 
 				long now = System.currentTimeMillis();
-				while (!concordance.finished()
-						|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 					Thread.sleep(5);
 				}
 				concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
@@ -405,7 +398,7 @@ public class QueryExecutor {
 		String crit = "";
 
 		//		simple sort
-		if (queryRequest.getSortQueryRequest().getMultilevelSort().isEmpty()) {
+		if (!queryRequest.getSortQueryRequest().getMultilevel()) {
 			if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.LEFT_CONTEXT)) {
 				critParam = String.format("-1<0~-%d<0", queryRequest.getSortQueryRequest().getNumberTokens());
 			} else if (queryRequest.getSortQueryRequest().getSortKey().equals(QueryExecutor.RIGHT_CONTEXT)) {
@@ -490,6 +483,29 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
+	private void executeWideContextQuery(WideContextRequest wideContextRequest) throws JsonProcessingException {
+		System.out.println(String.format("### 1. Wide context: %s %d %d", wideContextRequest.getCorpusName(),
+				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
+		final Corpus corpus = new Corpus(wideContextRequest.getCorpusName());
+		CorpRegion corpRegion = new CorpRegion(corpus, "word", "p,g,err,corr");
+		final Long pos = wideContextRequest.getPos();
+		StrVector leftRegion = corpRegion.region(pos - 40, pos);
+		final Integer hitlen = wideContextRequest.getHitlen();
+		StrVector kwicRegion = corpRegion.region(pos, pos + hitlen);
+		StrVector rightRegion = corpRegion.region(pos + hitlen, pos + hitlen + 40);
+		String leftContext = leftRegion.stream().collect(Collectors.joining(" "));
+		String kwicContext = kwicRegion.stream().collect(Collectors.joining(" "));
+		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.getWideContextResponse().setLeftContext(ContextUtils.removeContextTags(leftContext));
+		queryResponse.getWideContextResponse().setKwic(ContextUtils.removeContextTags(kwicContext));
+		queryResponse.getWideContextResponse().setRightContext(ContextUtils.removeContextTags(rightContext));
+		queryResponse.setInProgress(false);
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+		System.out.println(String.format("### 2. Finished Wide context: %s %d %d", wideContextRequest.getCorpusName(),
+				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
+	}
+
 	private String freqCritBuild(QueryRequest queryRequest) {
 		List<String> resList = new ArrayList<>();
 		if (!queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().isEmpty()) {
@@ -559,8 +575,8 @@ public class QueryExecutor {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
-				if (queryRequest.getWideContextRequest() != null
-						&& queryRequest.getWideContextRequest().getPos() != null) {
+				if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
+						.getPos() != null) {
 					this.executeWideContextQuery(queryRequest.getWideContextRequest());
 				} else if (queryRequest.getSortQueryRequest() != null) {
 					//sorting
@@ -579,29 +595,6 @@ public class QueryExecutor {
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 		}
-	}
-
-	private void executeWideContextQuery(WideContextRequest wideContextRequest) throws JsonProcessingException {
-		System.out.println(String.format("### 1. Wide context: %s %d %d", wideContextRequest.getCorpusName(),
-				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
-		final Corpus corpus = new Corpus(wideContextRequest.getCorpusName());
-		CorpRegion corpRegion = new CorpRegion(corpus, "word", "p,g,err,corr");
-		final Long pos = wideContextRequest.getPos();
-		StrVector leftRegion = corpRegion.region(pos - 40, pos);
-		final Integer hitlen = wideContextRequest.getHitlen();
-		StrVector kwicRegion = corpRegion.region(pos, pos + hitlen);
-		StrVector rightRegion = corpRegion.region(pos + hitlen, pos + hitlen + 40);
-		String leftContext = leftRegion.stream().collect(Collectors.joining(" "));
-		String kwicContext = kwicRegion.stream().collect(Collectors.joining(" "));
-		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
-		QueryResponse queryResponse = new QueryResponse();
-		queryResponse.getWideContextResponse().setLeftContext(ContextUtils.removeContextTags(leftContext));
-		queryResponse.getWideContextResponse().setKwic(ContextUtils.removeContextTags(kwicContext));
-		queryResponse.getWideContextResponse().setRightContext(ContextUtils.removeContextTags(rightContext));
-		queryResponse.setInProgress(false);
-		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
-		System.out.println(String.format("### 2. Finished Wide context: %s %d %d", wideContextRequest.getCorpusName(),
-				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
 	}
 
 	private String oneLevelCrit(String prefix, String attr, String ctx, String pos, String fcode, String icase,
@@ -704,8 +697,10 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest().getIncludeCategoriesWithNoHits() && freqLimit == 0
-					&& queryRequest.getFrequencyQueryRequest().getCategory().contains(".")) {
+			if (queryRequest.getFrequencyQueryRequest()
+					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
+					.getCategory()
+					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
