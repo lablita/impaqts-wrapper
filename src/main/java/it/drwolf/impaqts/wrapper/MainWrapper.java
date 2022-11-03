@@ -8,6 +8,7 @@ import it.drwolf.impaqts.wrapper.executor.QueryExecutor;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
@@ -70,7 +71,14 @@ public class MainWrapper implements Callable<Integer> {
 			qr.setEnd(this.end);
 			qr.setCql(this.cql);
 		}
-		queryExecutor.manageQueryRequest(this.corpus, qr);
+		try {
+			queryExecutor.manageQueryRequest(this.corpus, qr);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException(e);
+		}
 		return 0;
 	}
 
