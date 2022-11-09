@@ -61,7 +61,7 @@ public class MainWrapper implements Callable<Integer> {
 				});
 			} catch (JsonProcessingException e) {
 				e.printStackTrace();
-				System.err.println("Bad format for json request");
+				System.err.println("### Bad format for json request");
 				System.exit(1);
 			}
 		} else if (this.corpusMetadata != null && !this.corpusMetadata.isEmpty()) {
@@ -85,12 +85,12 @@ public class MainWrapper implements Callable<Integer> {
 	private void checkEnvironmentVariables() {
 		String manateeRegistryPath = System.getenv(MainWrapper.MANATEE_REGISTRY);
 		if (manateeRegistryPath == null || manateeRegistryPath.isEmpty()) {
-			System.err.println("Manatee registry environment variable not found. Exiting.");
+			System.err.println("### Manatee registry environment variable not found. Exiting.");
 			System.exit(1);
 		}
 		File manateeRegistryDir = new File(manateeRegistryPath);
 		if (!manateeRegistryDir.canRead() || !manateeRegistryDir.isDirectory() || !manateeRegistryDir.canWrite()) {
-			System.err.println("Cannot access Manatee registry. Exiting.");
+			System.err.println("### Cannot access Manatee registry. Exiting.");
 			System.exit(1);
 		}
 	}

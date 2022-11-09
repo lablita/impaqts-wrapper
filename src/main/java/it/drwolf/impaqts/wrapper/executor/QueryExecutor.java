@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class QueryExecutor {
 
@@ -247,22 +248,24 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
-					.replace(" ", "_") + QueryExecutor.EXT_CONC;
-			Optional<Path> pathWordOptional = Files.list(cachePath)
-					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
-					.findFirst();
-			if (pathWordOptional.isPresent()) {
-				concordance = new Concordance(corpus, pathWordOptional.get().toString());
-			} else {
-				concordance = new Concordance();
-				// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
-				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
-				long now = System.currentTimeMillis();
-				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
-					Thread.sleep(5);
+			String fileWordConcordance =
+					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			try (Stream<Path> cachePaths = Files.list(cachePath)) {
+				Optional<Path> pathWordOptional = cachePaths.filter(
+						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
+				if (pathWordOptional.isPresent()) {
+					concordance = new Concordance(corpus, pathWordOptional.get().toString());
+				} else {
+					concordance = new Concordance();
+					// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
+					concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
+					long now = System.currentTimeMillis();
+					while (!concordance.finished()
+							|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+						Thread.sleep(5);
+					}
+					concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
 				}
-				concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
 			}
 			concordance.sync();
 			CollocItems collocItems = new CollocItems(concordance,
@@ -577,8 +580,8 @@ public class QueryExecutor {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
 			} else {
-				if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
-						.getPos() != null) {
+				if (queryRequest.getWideContextRequest() != null
+						&& queryRequest.getWideContextRequest().getPos() != null) {
 					this.executeWideContextQuery(queryRequest.getWideContextRequest());
 				} else if (queryRequest.getSortQueryRequest() != null) {
 					//sorting
@@ -700,10 +703,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest()
-					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
-					.getCategory()
-					.contains(".")) {
+			if (queryRequest.getFrequencyQueryRequest().getIncludeCategoriesWithNoHits() && freqLimit == 0
+					&& queryRequest.getFrequencyQueryRequest().getCategory().contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
