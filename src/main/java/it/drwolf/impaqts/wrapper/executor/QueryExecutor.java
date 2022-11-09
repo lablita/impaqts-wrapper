@@ -111,31 +111,38 @@ public class QueryExecutor {
 
 	private List<DescResponse> contextConcordance(Concordance concordance,
 			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
+		List<DescResponse> descResponses = this.contextElaborating(concordance, "lemma",
+				Arrays.asList(contextConcordanceQueryRequest.getLemma().split(" ")),
+				contextConcordanceQueryRequest.getWindow(), contextConcordanceQueryRequest.getToken());
+		return descResponses;
+	}
+
+	private List<DescResponse> contextElaborating(Concordance concordance, String type, List<String> termList,
+			String window, int token) {
 		List<DescResponse> descResponses = new ArrayList<>();
-		List<String> lemmaList = Arrays.asList(contextConcordanceQueryRequest.getLemma().split(" "));
 		String lcTx = "";
 		String rcTx = "";
 		int rank;
-		if ("BOTH".equals(contextConcordanceQueryRequest.getWindow())) {
-			lcTx += (-contextConcordanceQueryRequest.getToken());
-			rcTx += contextConcordanceQueryRequest.getToken();
+		if ("BOTH".equals(window)) {
+			lcTx += (-token);
+			rcTx += token;
 			rank = 1;
-		} else if ("LEFT".equals(contextConcordanceQueryRequest.getWindow())) {
-			lcTx += (-contextConcordanceQueryRequest.getToken());
+		} else if ("LEFT".equals(window)) {
+			lcTx += (-token);
 			rcTx += "-1";
 			rank = -1;
 		} else {
 			lcTx = "1";
-			rcTx += contextConcordanceQueryRequest.getToken();
+			rcTx += token;
 			rank = 1;
 		}
-		for (String lemma : lemmaList) {
+		for (String term : termList) {
 			int collNum = concordance.numofcolls() + 1;
-			String query = String.format("[lemma=\"%s\"];", lemma);
+			String query = String.format("[%s=\"%s\"];", type, term);
 			concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
 			concordance.delete_pnfilter(collNum, true);
 			DescResponse descResponse = new DescResponse();
-			descResponse.setNiceArg(lemma);
+			descResponse.setNiceArg(term);
 			descResponse.setSize(concordance.size());
 			descResponses.add(descResponse);
 		}
@@ -361,6 +368,77 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
+	private void executeQueryPositiveFrequencyConcordance(String corpusName, QueryRequest queryRequest)
+			throws InterruptedException, IOException {
+		final Corpus corpus = new Corpus(corpusName);
+		final String cql = this.getCqlFromQueryRequest(queryRequest);
+		final int start = queryRequest.getStart();
+		final int end = queryRequest.getEnd();
+		final Concordance concordance = new Concordance();
+		int count = 0;
+		int requestedSize = end - start;
+		long now = System.currentTimeMillis();
+		List<KWICLine> sentKwicLines = new ArrayList<>();
+		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
+		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
+		// un tempo minimo di esecuzione
+		//boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
+
+		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
+		int whileCount = 1;
+		while (!concordance.finished()) {
+			Thread.sleep(50);
+			System.out.println(String.format("### WHILE %d", whileCount++));
+		}
+		count = concordance.size();
+		List<DescResponse> descResponses;
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.setCurrentSize(count);
+		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getMultilevelFrequency();
+
+		for (FrequencyOption freqOpt : frequencyOptionList) {
+			int token = freqOpt.getPosition().equals(QueryExecutor.NODE_CONTEXT) ?
+					1 :
+					Integer.parseInt(freqOpt.getPosition().substring(0, 1));
+			String window = freqOpt.getPosition().equals(QueryExecutor.NODE_CONTEXT) ?
+					"BOTH" :
+					(freqOpt.getPosition().contains("L") ? QueryExecutor.LEFT_CONTEXT : QueryExecutor.RIGHT_CONTEXT);
+			descResponses = this.contextElaborating(concordance, freqOpt.getAttribute(),
+					Arrays.asList(freqOpt.getTerm()), window, token);
+			queryResponse.getDescResponses().addAll(descResponses);
+		}
+		List<KWICLine> kwicLines = new ArrayList<>();
+		Integer maxLine = requestedSize;
+		if (maxLine > count) {
+			maxLine = count;
+		}
+		//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+				"up,g,err,corr", "doc", 100);
+		for (int linenum = 0; linenum < maxLine; linenum++) {
+			if (!kl.nextline()) {
+				break;
+			}
+			KWICLine kwicLine = new KWICLine(kl);
+			kwicLines.add(kwicLine);
+		}
+		if (!sentKwicLines.equals(kwicLines)) {
+			queryResponse.getKwicLines().addAll(kwicLines);
+			sentKwicLines.clear();
+			sentKwicLines.addAll(kwicLines);
+		}
+		queryResponse.setInProgress(!concordance.finished());
+
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
+		Thread.sleep(5);
+		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
+				(System.currentTimeMillis() - now)));
+		// Thread.sleep(8000);
+		// System.out.println("### Size: " + concordance.size());
+		concordance.delete();
+		corpus.delete();
+	}
+
 	private void executeQuerySort(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
@@ -572,29 +650,40 @@ public class QueryExecutor {
 	}
 
 	// chiamata a metodo getCQLfromqueryrequest che trasforma i dati di input in stringa cql
-	public void manageQueryRequest(String corpus, QueryRequest queryRequest) throws IOException, InterruptedException {
+	public void manageQueryRequest(String corpus, QueryRequest queryRequest) throws Exception {
 		try {
 			if (queryRequest.getCorpusMetadatum() != null && !queryRequest.getCorpusMetadatum().isEmpty()) {
 				this.retrieveMetadata(corpus, queryRequest.getCorpusMetadatum());
+			} else if (!QueryRequest.RequestType.contain(queryRequest.getQueryType())) {
+				throw new Exception("Invalid RequestType");
 			} else {
+				QueryRequest.RequestType requestType = QueryRequest.RequestType.valueOf(queryRequest.getQueryType());
 				if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
 						.getPos() != null) {
 					this.executeWideContextQuery(queryRequest.getWideContextRequest());
-				} else if (queryRequest.getSortQueryRequest() != null) {
-					//sorting
+				}
+				switch (requestType) {
+				case QUICK_SORT_REQUEST:
 					this.executeQuerySort(corpus, queryRequest);
-				} else if (queryRequest.getCollocationQueryRequest() != null) {
-					//collocation
+					break;
+				case COLLOCATION_REQUEST:
 					this.executeQueryCollocation(corpus, queryRequest);
-				} else if (queryRequest.getFrequencyQueryRequest() != null) {
-					//frequency
+					break;
+				case CONC_FREQUENCY_QUERY_REQUEST:
+				case MULTI_FREQUENCY_QUERY_REQUEST:
 					this.executeQueryFrequency(corpus, queryRequest);
-				} else {
+					break;
+				case POSITIVE_FREQUEQUENCY_CONCORDANCE_QUERY_REQUEST:
+					this.executeQueryPositiveFrequencyConcordance(corpus, queryRequest);
+					break;
+				case CONTEXT_QUERY_REQUEST:
+				default:
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, queryRequest);
 				}
+
 			}
-		} catch (InterruptedException | IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
 		}

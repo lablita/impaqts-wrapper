@@ -8,7 +8,6 @@ import it.drwolf.impaqts.wrapper.executor.QueryExecutor;
 import picocli.CommandLine;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
@@ -57,7 +56,7 @@ public class MainWrapper implements Callable<Integer> {
 		if (this.json != null) {
 			try {
 				String jsonFormatted = this.json.replace("\\\\", "\\");
-				qr = this.objectMapper.readValue(jsonFormatted, new TypeReference<QueryRequest>() {
+				qr = this.objectMapper.readValue(jsonFormatted, new TypeReference<>() {
 				});
 			} catch (JsonProcessingException e) {
 				e.printStackTrace();
@@ -73,9 +72,7 @@ public class MainWrapper implements Callable<Integer> {
 		}
 		try {
 			queryExecutor.manageQueryRequest(this.corpus, qr);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			Thread.currentThread().interrupt();
 			throw new RuntimeException(e);
 		}

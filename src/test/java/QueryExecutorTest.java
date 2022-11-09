@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
@@ -61,9 +60,7 @@ public class QueryExecutorTest {
 		QueryExecutor qe = new QueryExecutor("/tmp/cache/");
 		try {
 			qe.manageQueryRequest(QueryExecutorTest.CORPUS_NAME, qr);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		String output = this.outContent.toString();
@@ -77,7 +74,7 @@ public class QueryExecutorTest {
 		Assertions.assertTrue(noCommentsLine.size() > 0, "At least one no comment output");
 		String firstLine = noCommentsLine.get(0);
 		try {
-			QueryResponse response = this.objectMapper.readValue(firstLine, new TypeReference<QueryResponse>() {
+			QueryResponse response = this.objectMapper.readValue(firstLine, new TypeReference<>() {
 			});
 			Assertions.assertNotNull(response, "Response must not be null");
 			Assertions.assertEquals(0, response.getCurrentSize(), "No results");
@@ -95,9 +92,7 @@ public class QueryExecutorTest {
 		QueryExecutor qe = new QueryExecutor("/tmp/cache/");
 		try {
 			qe.manageQueryRequest(QueryExecutorTest.CORPUS_NAME, qr);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		String output = this.outContent.toString();
@@ -111,7 +106,7 @@ public class QueryExecutorTest {
 		Assertions.assertTrue(noCommentsLine.size() > 0, "At least one no comment output");
 		String firstLine = noCommentsLine.get(0);
 		try {
-			QueryResponse response = this.objectMapper.readValue(firstLine, new TypeReference<QueryResponse>() {
+			QueryResponse response = this.objectMapper.readValue(firstLine, new TypeReference<>() {
 			});
 			Assertions.assertNotNull(response, "Response must not be null");
 			Assertions.assertTrue(response.getCurrentSize() > 0, "Some results must be here");

@@ -15,16 +15,16 @@ public class QueryRequest {
 	private SortQueryRequest sortQueryRequest;
 	private FrequencyQueryRequest frequencyQueryRequest;
 	private ContextConcordanceQueryRequest contextConcordanceQueryRequest;
-
 	private WideContextRequest wideContextRequest;
 	private ConcordanceFromCollocationParameters concordanceFromCollocationParameters;
+	private String queryType;
 
 	public CollocationQueryRequest getCollocationQueryRequest() {
 		return this.collocationQueryRequest;
 	}
 
 	public ConcordanceFromCollocationParameters getConcordanceFromCollocationParameters() {
-		return concordanceFromCollocationParameters;
+		return this.concordanceFromCollocationParameters;
 	}
 
 	public ContextConcordanceQueryRequest getContextConcordanceQueryRequest() {
@@ -59,6 +59,10 @@ public class QueryRequest {
 		return this.queryPattern;
 	}
 
+	public String getQueryType() {
+		return this.queryType;
+	}
+
 	public SortQueryRequest getSortQueryRequest() {
 		return this.sortQueryRequest;
 	}
@@ -68,7 +72,7 @@ public class QueryRequest {
 	}
 
 	public WideContextRequest getWideContextRequest() {
-		return wideContextRequest;
+		return this.wideContextRequest;
 	}
 
 	public String getWord() {
@@ -120,6 +124,10 @@ public class QueryRequest {
 		this.queryPattern = queryPattern;
 	}
 
+	public void setQueryType(String queryType) {
+		this.queryType = queryType;
+	}
+
 	public void setSortQueryRequest(SortQueryRequest sortQueryRequest) {
 		this.sortQueryRequest = sortQueryRequest;
 	}
@@ -134,5 +142,18 @@ public class QueryRequest {
 
 	public void setWord(String word) {
 		this.word = word;
+	}
+
+	public enum RequestType {
+		VISUAL_QUERY_REQUEST, TEXTUAL_QUERY_REQUEST, CONTEXT_QUERY_REQUEST, COLLOCATION_REQUEST, QUICK_SORT_REQUEST, MULTI_FREQUENCY_QUERY_REQUEST, CONC_FREQUENCY_QUERY_REQUEST, POSITIVE_FREQUEQUENCY_CONCORDANCE_QUERY_REQUEST;
+
+		public static boolean contain(String dir) {
+			try {
+				RequestType.valueOf(dir);
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+		}
 	}
 }
