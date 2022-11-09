@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class QueryExecutor {
 
@@ -256,20 +257,21 @@ public class QueryExecutor {
 			}
 			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
 					.replace(" ", "_") + QueryExecutor.EXT_CONC;
-			Optional<Path> pathWordOptional = Files.list(cachePath)
-					.filter(file -> file.getFileName().toString().contains(fileWordConcordance))
-					.findFirst();
-			if (pathWordOptional.isPresent()) {
-				concordance = new Concordance(corpus, pathWordOptional.get().toString());
-			} else {
-				concordance = new Concordance();
-				// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
-				concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
-				long now = System.currentTimeMillis();
-				while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
-					Thread.sleep(5);
+			try (Stream<Path> cachePaths = Files.list(cachePath)) {
+				Optional<Path> pathWordOptional = cachePaths.filter(
+						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
+				if (pathWordOptional.isPresent()) {
+					concordance = new Concordance(corpus, pathWordOptional.get().toString());
+				} else {
+					concordance = new Concordance();
+					// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
+					concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
+					long now = System.currentTimeMillis();
+					while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+						Thread.sleep(5);
+					}
+					concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
 				}
-				concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
 			}
 			concordance.sync();
 			CollocItems collocItems = new CollocItems(concordance,
@@ -591,13 +593,6 @@ public class QueryExecutor {
 		}
 	}
 
-	private String getCqlFromContextConcordanceRqueryRequest(
-			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
-		String context = null;
-
-		return context;
-	}
-
 	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
 		if (queryRequest.getQueryInCql()) {
 			return queryRequest.getCql();
@@ -700,12 +695,6 @@ public class QueryExecutor {
 		}
 		res.append(ctx);
 		return res.toString();
-	}
-
-	private DescResponse retrieveDescription(QueryRequest query, String corpusName) {
-		DescResponse descResponse = new DescResponse();
-
-		return descResponse;
 	}
 
 	// recupera valori dei metadati che sono sui singoli documenti
