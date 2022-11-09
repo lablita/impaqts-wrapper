@@ -516,13 +516,6 @@ public class QueryExecutor {
 		}
 	}
 
-	private String getCqlFromContextConcordanceRqueryRequest(
-			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
-		String context = null;
-
-		return context;
-	}
-
 	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
 		if (queryRequest.getQueryInCql()) {
 			return queryRequest.getCql();
@@ -614,12 +607,6 @@ public class QueryExecutor {
 		}
 		res.append(ctx);
 		return res.toString();
-	}
-
-	private DescResponse retrieveDescription(QueryRequest query, String corpusName) {
-		DescResponse descResponse = new DescResponse();
-
-		return descResponse;
 	}
 
 	// recupera valori dei metadati che sono sui singoli documenti
