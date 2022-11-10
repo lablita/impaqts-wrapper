@@ -115,21 +115,21 @@ public class QueryExecutor {
 		List<DescResponse> descResponses = new ArrayList<>();
 		contextConcordanceQueryRequest.getItems().forEach(item -> {
 			final String window = item.getWindow();
-			final Integer token = item.getToken();
+			final Integer tokens = item.getTokens();
 			String lcTx = "";
 			String rcTx = "";
 			int rank;
 			if ("BOTH".equals(window)) {
-				lcTx += (-token);
-				rcTx += token;
+				lcTx += (-tokens);
+				rcTx += tokens;
 				rank = 1;
 			} else if ("LEFT".equals(window)) {
-				lcTx += (-token);
+				lcTx += (-tokens);
 				rcTx += "-1";
 				rank = -1;
 			} else {
 				lcTx = "1";
-				rcTx += token;
+				rcTx += tokens;
 				rank = 1;
 			}
 			int collNum = concordance.numofcolls() + 1;
@@ -141,7 +141,7 @@ public class QueryExecutor {
 			descResponse.setTerm(item.getTerm());
 			descResponse.setAttribute(item.getAttribute());
 			descResponse.setWindow(window);
-			descResponse.setTokens(token);
+			descResponse.setTokens(tokens);
 			descResponse.setSize(concordance.size());
 			descResponses.add(descResponse);
 		});
@@ -155,7 +155,7 @@ public class QueryExecutor {
 		StringBuilder lcTx = new StringBuilder();
 		StringBuilder rcTx = new StringBuilder();
 		if (position != null) {
-			if (position.equals(NODE_CONTEXT)) {
+			if (position.equals(QueryExecutor.NODE_CONTEXT)) {
 				lcTx.append("0");
 				rcTx.append("0>0");
 			} else if (position.endsWith("L") && position.length() > 1) {
@@ -287,8 +287,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			try (Stream<Path> cachePaths = Files.list(cachePath)) {
 				Optional<Path> pathWordOptional = cachePaths.filter(
 						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
@@ -299,8 +299,7 @@ public class QueryExecutor {
 					// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
 					concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 					long now = System.currentTimeMillis();
-					while (!concordance.finished()
-							|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+					while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 						Thread.sleep(5);
 					}
 					concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
@@ -695,8 +694,8 @@ public class QueryExecutor {
 					this.executeQueryPositiveFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
-					if (queryRequest.getWideContextRequest() != null
-							&& queryRequest.getWideContextRequest().getPos() != null) {
+					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
+							.getPos() != null) {
 						this.executeWideContextQuery(queryRequest.getWideContextRequest());
 					}
 					break;
@@ -807,8 +806,10 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest().getIncludeCategoriesWithNoHits() && freqLimit == 0
-					&& queryRequest.getFrequencyQueryRequest().getCategory().contains(".")) {
+			if (queryRequest.getFrequencyQueryRequest()
+					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
+					.getCategory()
+					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
