@@ -112,13 +112,13 @@ public class QueryExecutor {
 
 	private List<DescResponse> contextConcordance(Concordance concordance,
 			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
-		List<DescResponse> descResponses = this.contextElaborating(concordance, "lemma",
+		List<DescResponse> descResponses = this.elaboratingContext(concordance, "lemma",
 				Arrays.asList(contextConcordanceQueryRequest.getLemma().split(" ")),
 				contextConcordanceQueryRequest.getWindow(), contextConcordanceQueryRequest.getToken());
 		return descResponses;
 	}
 
-	private List<DescResponse> contextElaborating(Concordance concordance, String type, List<String> termList,
+	private List<DescResponse> elaboratingContext(Concordance concordance, String type, List<String> termList,
 			String window, int token) {
 		List<DescResponse> descResponses = new ArrayList<>();
 		String lcTx = "";
@@ -150,7 +150,7 @@ public class QueryExecutor {
 		return descResponses;
 	}
 
-	private List<KWICLineDTO> elaborateKWICLines(KWICLines kl) {
+	private List<KWICLineDTO> elaboratingKWICLines(KWICLines kl) {
 		int refsLen = 1;
 		StrVector refList = kl.get_ref_list();
 		List<KWICLineDTO> kwicLineDTOList = new ArrayList<>();
@@ -355,7 +355,7 @@ public class QueryExecutor {
 		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "", "", "word,tag,lemma", "word",
 				"p,g,err,corr", "=doc.sito,=doc.categoria");
 
-		List<KWICLineDTO> kwicLineDTOList = this.elaborateKWICLines(kl);
+		List<KWICLineDTO> kwicLineDTOList = this.elaboratingKWICLines(kl);
 		FrequencyOutput frequencyOutput = new FrequencyOutput();
 		frequencyOutput.setLines(kwicLineDTOList);
 		frequencyOutput.setFromP(1);
@@ -405,7 +405,7 @@ public class QueryExecutor {
 			String window = freqOpt.getPosition().equals(QueryExecutor.NODE_CONTEXT) ?
 					"BOTH" :
 					(freqOpt.getPosition().contains("L") ? QueryExecutor.LEFT_CONTEXT : QueryExecutor.RIGHT_CONTEXT);
-			descResponses = this.contextElaborating(concordance, freqOpt.getAttribute(),
+			descResponses = this.elaboratingContext(concordance, freqOpt.getAttribute(),
 					Arrays.asList(freqOpt.getTerm()), window, token);
 			queryResponse.getDescResponses().addAll(descResponses);
 		}
