@@ -10,7 +10,7 @@ public class FrequencyQueryRequest {
 	private String frequencyTypeSort;
 	private String frequencyType;
 	private List<String> categories = new ArrayList<>();
-	private List<FrequencyOption> multilevelFrequency = new ArrayList<>();
+	private List<FrequencyOption> freqOptList = new ArrayList<>();
 	private String category;
 	private boolean positive;
 
@@ -20,6 +20,10 @@ public class FrequencyQueryRequest {
 
 	public String getCategory() {
 		return this.category;
+	}
+
+	public List<FrequencyOption> getFreqOptList() {
+		return this.freqOptList;
 	}
 
 	public Integer getFrequencyColSort() {
@@ -42,10 +46,6 @@ public class FrequencyQueryRequest {
 		return this.includeCategoriesWithNoHits;
 	}
 
-	public List<FrequencyOption> getMultilevelFrequency() {
-		return this.multilevelFrequency;
-	}
-
 	public boolean isPositive() {
 		return this.positive;
 	}
@@ -56,6 +56,10 @@ public class FrequencyQueryRequest {
 
 	public void setCategory(String category) {
 		this.category = category;
+	}
+
+	public void setFreqOptList(List<FrequencyOption> freqOptList) {
+		this.freqOptList = freqOptList;
 	}
 
 	public void setFrequencyColSort(Integer frequencyColSort) {
@@ -76,10 +80,6 @@ public class FrequencyQueryRequest {
 
 	public void setIncludeCategoriesWithNoHits(Boolean includeCategoriesWithNoHits) {
 		this.includeCategoriesWithNoHits = includeCategoriesWithNoHits;
-	}
-
-	public void setMultilevelFrequency(List<FrequencyOption> multilevelFrequency) {
-		this.multilevelFrequency = multilevelFrequency;
 	}
 
 	public void setPositive(boolean positive) {

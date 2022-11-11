@@ -156,29 +156,38 @@ public class QueryExecutor {
 	}
 
 	private DescResponse elaboratingContextForConcordanciesFromFrequenciesPN(Concordance concordance,
-			FrequencyOption frequencyOption, boolean positive) {
+			FrequencyOption frequencyOption, boolean positive, boolean multiFreq) {
 		// lcTx è sempre uguale a rcTx se non è NODE_CONTEXT
-		String position = frequencyOption.getPosition();
 		StringBuilder lcTx = new StringBuilder();
 		StringBuilder rcTx = new StringBuilder();
-		if (position != null) {
-			if (position.equals(QueryExecutor.NODE_CONTEXT)) {
-				lcTx.append("0");
-				rcTx.append("0>0");
-			} else if (position.endsWith("L") && position.length() > 1) {
-				lcTx.append("-");
-				String distance = position.substring(0, 1);
-				lcTx.append(distance).append("<0");
-				rcTx.append(lcTx);
-			} else if (position.endsWith("R") && position.length() > 1) {
-				String distance = position.substring(0, 1);
-				lcTx.append(distance).append(">0");
-				rcTx.append(lcTx);
+		Integer rank = 0;
+		String query;
+		if (multiFreq) {//MULTI_FREQ
+			String position = frequencyOption.getPosition();
+			if (position != null) {
+				if (position.equals(QueryExecutor.NODE_CONTEXT)) {
+					lcTx.append("0");
+					rcTx.append("0>0");
+				} else if (position.endsWith("L") && position.length() > 1) {
+					lcTx.append("-");
+					String distance = position.substring(0, 1);
+					lcTx.append(distance).append("<0");
+					rcTx.append(lcTx);
+				} else if (position.endsWith("R") && position.length() > 1) {
+					String distance = position.substring(0, 1);
+					lcTx.append(distance).append(">0");
+					rcTx.append(lcTx);
+				}
 			}
+			query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), frequencyOption.getTerm());
+		} else {//_TEXT_TYPE_FREQ
+			rank = 1;
+			lcTx.append("0");
+			rcTx.append("0<0");
+			query = String.format("[] within %s;", frequencyOption.getTerm());
 		}
 		int collNum = concordance.numofcolls() + 1;
-		String query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), frequencyOption.getTerm());
-		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), 0, false);
+		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), rank, false);
 		concordance.delete_pnfilter(collNum, positive);
 		DescResponse descResponse = new DescResponse();
 		descResponse.setNiceArg(frequencyOption.getTerm());
@@ -405,7 +414,7 @@ public class QueryExecutor {
 
 		boolean ml = true;
 		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end,
-				queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().size() > 0, 300, 0L));
+				queryRequest.getFrequencyQueryRequest().getFreqOptList().size() > 0, 300, 0L));
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
@@ -438,11 +447,13 @@ public class QueryExecutor {
 		List<DescResponse> descResponses = new ArrayList<>();
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
-		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getMultilevelFrequency();
+		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getFreqOptList();
 		boolean positive = queryRequest.getFrequencyQueryRequest().isPositive();
-
+		boolean multiFreq = queryRequest.getQueryType()
+				.equals(QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST);
 		for (FrequencyOption freqOpt : frequencyOptionList) {
-			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt, positive));
+			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt, positive,
+					multiFreq));
 		}
 		queryResponse.getDescResponses().addAll(descResponses);
 		List<KWICLine> kwicLines = new ArrayList<>();
@@ -601,9 +612,8 @@ public class QueryExecutor {
 
 	private String freqCritBuild(QueryRequest queryRequest) {
 		List<String> resList = new ArrayList<>();
-		if (!queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().isEmpty()) {
-			List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest()
-					.getMultilevelFrequency();
+		if (!queryRequest.getFrequencyQueryRequest().getFreqOptList().isEmpty()) {
+			List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getFreqOptList();
 			for (FrequencyOption frequencyOption : frequencyOptionList) {
 				resList.add(this.oneLevelCrit("", frequencyOption.getAttribute(), "",
 						this.fromAttributeToSymbolic(frequencyOption.getPosition()), "rc",
@@ -697,11 +707,12 @@ public class QueryExecutor {
 				case COLLOCATION_REQUEST:
 					this.executeQueryCollocation(corpus, queryRequest);
 					break;
-				case CONC_FREQUENCY_QUERY_REQUEST:
+				case METADATA_FREQUENCY_QUERY_REQUEST:
 				case MULTI_FREQUENCY_QUERY_REQUEST:
 					this.executeQueryFrequency(corpus, queryRequest);
 					break;
-				case PN_FREQUEQUENCY_CONCORDANCE_QUERY_REQUEST:
+				case PN_METADATA_FREQ_CONCORDANCE_QUERY_REQUEST:
+				case PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST:
 					this.executeQueryPNFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
