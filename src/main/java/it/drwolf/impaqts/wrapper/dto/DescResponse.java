@@ -5,8 +5,7 @@ public class DescResponse {
 	private String toUrl;
 	private float rel;
 	private String arg;
-	private String op;
-
+	private String operation;
 	private String attribute;
 	private String term;
 	private String position;
@@ -26,8 +25,8 @@ public class DescResponse {
 		return this.niceArg;
 	}
 
-	public String getOp() {
-		return this.op;
+	public String getOperation() {
+		return this.operation;
 	}
 
 	public String getPosition() {
@@ -70,8 +69,8 @@ public class DescResponse {
 		this.niceArg = niceArg;
 	}
 
-	public void setOp(String op) {
-		this.op = op;
+	public void setOperation(String operation) {
+		this.operation = operation;
 	}
 
 	public void setPosition(String position) {

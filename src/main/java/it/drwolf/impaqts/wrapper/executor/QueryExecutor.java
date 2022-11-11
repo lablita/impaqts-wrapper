@@ -149,7 +149,7 @@ public class QueryExecutor {
 			descResponse.setTokens(tokens);
 			descResponse.setSize(concordance.size());
 			//TODO to check
-			descResponse.setOp(op);
+			descResponse.setOperation(op);
 			descResponses.add(descResponse);
 		});
 		return descResponses;
@@ -195,7 +195,7 @@ public class QueryExecutor {
 		descResponse.setAttribute(frequencyOption.getAttribute());
 		descResponse.setTerm(frequencyOption.getTerm());
 		descResponse.setSize(concordance.size());
-		descResponse.setOp(positive ?
+		descResponse.setOperation(positive ?
 				DescResponse.OperationType.POSITIVE_FILTER.toString() :
 				DescResponse.OperationType.NEGATIVE_FILTER.toString());
 		return descResponse;
@@ -385,8 +385,7 @@ public class QueryExecutor {
 
 	}
 
-	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest)
-			throws InterruptedException, IOException {
+	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest) throws IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
 		final int start = queryRequest.getStart();
@@ -415,6 +414,13 @@ public class QueryExecutor {
 		boolean ml = true;
 		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end,
 				queryRequest.getFrequencyQueryRequest().getFreqOptList().size() > 0, 300, 0L));
+
+		boolean multiFreq = queryRequest.getQueryType()
+				.equals(QueryRequest.RequestType.MULTI_FREQUENCY_QUERY_REQUEST.toString());
+		queryResponse.getFrequency()
+				.setOperation(multiFreq ?
+						QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString() :
+						QueryRequest.RequestType.PN_METADATA_FREQ_CONCORDANCE_QUERY_REQUEST.toString());
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
@@ -456,6 +462,7 @@ public class QueryExecutor {
 					multiFreq));
 		}
 		queryResponse.getDescResponses().addAll(descResponses);
+
 		List<KWICLine> kwicLines = new ArrayList<>();
 		Integer maxLine = requestedSize;
 		if (maxLine > count) {
