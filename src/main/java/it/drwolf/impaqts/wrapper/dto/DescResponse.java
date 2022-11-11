@@ -19,7 +19,7 @@ public class DescResponse {
 	}
 
 	public String getAttribute() {
-		return attribute;
+		return this.attribute;
 	}
 
 	public String getNiceArg() {
@@ -31,7 +31,7 @@ public class DescResponse {
 	}
 
 	public String getPosition() {
-		return position;
+		return this.position;
 	}
 
 	public float getRel() {
@@ -43,7 +43,7 @@ public class DescResponse {
 	}
 
 	public String getTerm() {
-		return term;
+		return this.term;
 	}
 
 	public String getToUrl() {
@@ -51,11 +51,11 @@ public class DescResponse {
 	}
 
 	public Integer getTokens() {
-		return tokens;
+		return this.tokens;
 	}
 
 	public String getWindow() {
-		return window;
+		return this.window;
 	}
 
 	public void setArg(String arg) {
@@ -100,6 +100,19 @@ public class DescResponse {
 
 	public void setWindow(String window) {
 		this.window = window;
+	}
+
+	public enum OperationType {
+		NEGATIVE_FILTER, POSITIVE_FILTER, QUERY;
+
+		public static boolean contain(String dir) {
+			try {
+				QueryRequest.RequestType.valueOf(dir);
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+		}
 	}
 }
 

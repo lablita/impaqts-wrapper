@@ -5,7 +5,7 @@ public class ContextConcordanceItem {
 	private Integer tokens;
 	private String term;
 	private String attribute; // WORD, LEMMA, ...
-	private String item;
+	private String item; // ALL, ANY, NONE
 
 	public String getAttribute() {
 		return this.attribute;
@@ -45,5 +45,18 @@ public class ContextConcordanceItem {
 
 	public void setWindow(String window) {
 		this.window = window;
+	}
+
+	public enum ItemsType {
+		ANY, ALL, NONE;
+
+		public static boolean contain(String dir) {
+			try {
+				QueryRequest.RequestType.valueOf(dir);
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+		}
 	}
 }

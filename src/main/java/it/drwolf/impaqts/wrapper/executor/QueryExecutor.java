@@ -13,6 +13,7 @@ import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
+import it.drwolf.impaqts.wrapper.dto.ContextConcordanceItem;
 import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.DescResponse;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
@@ -132,10 +133,14 @@ public class QueryExecutor {
 				rcTx += tokens;
 				rank = 1;
 			}
+			String op = (item.getItem().equals(ContextConcordanceItem.ItemsType.ANY.toString()) || item.getItem()
+					.equals(ContextConcordanceItem.ItemsType.ALL.toString())) ?
+					DescResponse.OperationType.POSITIVE_FILTER.toString() :
+					DescResponse.OperationType.NEGATIVE_FILTER.toString();
 			int collNum = concordance.numofcolls() + 1;
 			String query = String.format("[%s=\"%s\"];", item.getAttribute(), item.getTerm());
 			concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
-			concordance.delete_pnfilter(collNum, true);
+			concordance.delete_pnfilter(collNum, op.equals(DescResponse.OperationType.POSITIVE_FILTER.toString()));
 			DescResponse descResponse = new DescResponse();
 			descResponse.setNiceArg(item.getTerm());
 			descResponse.setTerm(item.getTerm());
@@ -143,13 +148,15 @@ public class QueryExecutor {
 			descResponse.setWindow(window);
 			descResponse.setTokens(tokens);
 			descResponse.setSize(concordance.size());
+			//TODO to check
+			descResponse.setOp(op);
 			descResponses.add(descResponse);
 		});
 		return descResponses;
 	}
 
 	private DescResponse elaboratingContextForConcordanciesFromFrequenciesPN(Concordance concordance,
-			FrequencyOption frequencyOption) {
+			FrequencyOption frequencyOption, boolean positive) {
 		// lcTx è sempre uguale a rcTx se non è NODE_CONTEXT
 		String position = frequencyOption.getPosition();
 		StringBuilder lcTx = new StringBuilder();
@@ -172,13 +179,16 @@ public class QueryExecutor {
 		int collNum = concordance.numofcolls() + 1;
 		String query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), frequencyOption.getTerm());
 		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), 0, false);
-		concordance.delete_pnfilter(collNum, true);
+		concordance.delete_pnfilter(collNum, positive);
 		DescResponse descResponse = new DescResponse();
 		descResponse.setNiceArg(frequencyOption.getTerm());
 		descResponse.setPosition(frequencyOption.getPosition());
 		descResponse.setAttribute(frequencyOption.getAttribute());
 		descResponse.setTerm(frequencyOption.getTerm());
 		descResponse.setSize(concordance.size());
+		descResponse.setOp(positive ?
+				DescResponse.OperationType.POSITIVE_FILTER.toString() :
+				DescResponse.OperationType.NEGATIVE_FILTER.toString());
 		return descResponse;
 	}
 
@@ -402,7 +412,7 @@ public class QueryExecutor {
 		corpus.delete();
 	}
 
-	private void executeQueryPositiveFrequencyConcordance(String corpusName, QueryRequest queryRequest)
+	private void executeQueryPNFrequencyConcordance(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
@@ -429,9 +439,10 @@ public class QueryExecutor {
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
 		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getMultilevelFrequency();
+		boolean positive = queryRequest.getFrequencyQueryRequest().isPositive();
 
 		for (FrequencyOption freqOpt : frequencyOptionList) {
-			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt));
+			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt, positive));
 		}
 		queryResponse.getDescResponses().addAll(descResponses);
 		List<KWICLine> kwicLines = new ArrayList<>();
@@ -690,8 +701,8 @@ public class QueryExecutor {
 				case MULTI_FREQUENCY_QUERY_REQUEST:
 					this.executeQueryFrequency(corpus, queryRequest);
 					break;
-				case POSITIVE_FREQUEQUENCY_CONCORDANCE_QUERY_REQUEST:
-					this.executeQueryPositiveFrequencyConcordance(corpus, queryRequest);
+				case PN_FREQUEQUENCY_CONCORDANCE_QUERY_REQUEST:
+					this.executeQueryPNFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
 					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()

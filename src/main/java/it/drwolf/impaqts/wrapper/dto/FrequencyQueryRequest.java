@@ -12,6 +12,7 @@ public class FrequencyQueryRequest {
 	private List<String> categories = new ArrayList<>();
 	private List<FrequencyOption> multilevelFrequency = new ArrayList<>();
 	private String category;
+	private boolean positive;
 
 	public List<String> getCategories() {
 		return this.categories;
@@ -30,7 +31,7 @@ public class FrequencyQueryRequest {
 	}
 
 	public String getFrequencyType() {
-		return frequencyType;
+		return this.frequencyType;
 	}
 
 	public String getFrequencyTypeSort() {
@@ -43,6 +44,10 @@ public class FrequencyQueryRequest {
 
 	public List<FrequencyOption> getMultilevelFrequency() {
 		return this.multilevelFrequency;
+	}
+
+	public boolean isPositive() {
+		return this.positive;
 	}
 
 	public void setCategories(List<String> categories) {
@@ -75,6 +80,10 @@ public class FrequencyQueryRequest {
 
 	public void setMultilevelFrequency(List<FrequencyOption> multilevelFrequency) {
 		this.multilevelFrequency = multilevelFrequency;
+	}
+
+	public void setPositive(boolean positive) {
+		this.positive = positive;
 	}
 }
 
