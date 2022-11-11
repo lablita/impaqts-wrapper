@@ -450,7 +450,7 @@ public class QueryExecutor {
 		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getFreqOptList();
 		boolean positive = queryRequest.getFrequencyQueryRequest().isPositive();
 		boolean multiFreq = queryRequest.getQueryType()
-				.equals(QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST);
+				.equals(QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString());
 		for (FrequencyOption freqOpt : frequencyOptionList) {
 			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt, positive,
 					multiFreq));
