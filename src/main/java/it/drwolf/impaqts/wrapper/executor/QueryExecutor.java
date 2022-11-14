@@ -41,6 +41,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -133,7 +134,8 @@ public class QueryExecutor {
 				rank = 1;
 			}
 			int collNum = concordance.numofcolls() + 1;
-			String query = String.format("[%s=\"%s\"];", item.getAttribute(), item.getTerm());
+			String escapedTerm = item.getTerm().replace("\"","\\\"");
+			String query = String.format("[%s=\"%s\"];", item.getAttribute(), escapedTerm);
 			concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
 			concordance.delete_pnfilter(collNum, true);
 			DescResponse descResponse = new DescResponse();
@@ -170,7 +172,9 @@ public class QueryExecutor {
 			}
 		}
 		int collNum = concordance.numofcolls() + 1;
-		String query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), frequencyOption.getTerm());
+		// CQL doesn't like "
+		String escapedTerm = frequencyOption.getTerm().replace("\"","\\\"");
+		String query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), escapedTerm);
 		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), 0, false);
 		concordance.delete_pnfilter(collNum, true);
 		DescResponse descResponse = new DescResponse();
@@ -731,11 +735,14 @@ public class QueryExecutor {
 		PosAttr posAttr = corpus.get_attr(attribute);
 		final int posAttrRange = posAttr.id_range();
 		QueryResponse queryResponse = new QueryResponse();
+		List<String> metadataValues = new ArrayList<>();
 		for (int i = 0; i < posAttrRange; i++) {
 			if (posAttr.freq(i) > 0) {
-				queryResponse.getMetadataValues().add(posAttr.id2str(i));
+				metadataValues.add(posAttr.id2str(i));
 			}
 		}
+		Collections.sort(metadataValues);
+		queryResponse.getMetadataValues().addAll(metadataValues);
 		queryResponse.setCurrentSize(queryResponse.getMetadataValues().size());
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 	}

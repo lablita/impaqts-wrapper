@@ -85,7 +85,9 @@ public class QueryTag {
 			op = "!=";
 		}
 		if (!this.structure.equals("token")) {
-			return this.structure + " " + this.name + op + "\"" + val + "\"";
+			// strip "doc." string from name
+			final String n = this.name.replaceAll("doc\\.", "");
+			return this.structure + " " + n + op + "\"" + val + "\"";
 		}
 		return this.name + op + "\"" + val + "\"";
 
