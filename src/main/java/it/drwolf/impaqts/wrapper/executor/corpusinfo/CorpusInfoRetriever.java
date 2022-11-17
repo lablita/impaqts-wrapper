@@ -155,6 +155,7 @@ public class CorpusInfoRetriever {
 					sizesMap.put(sls[0].trim(), sls[1].trim());
 				}
 			});
+			return sizesMap;
 		}
 		return Collections.emptyMap();
 	}
@@ -193,7 +194,7 @@ public class CorpusInfoRetriever {
 					lposlist = this.corpConfPairs(corpus, "LPOSLIST");
 				}
 				alignedDetail.setName(alCorpus.get_conf("NAME"));
-				alignedDetail.setLanguage_name(alCorpus.get_conf("LANGUAGE"));
+				alignedDetail.setLanguageName(alCorpus.get_conf("LANGUAGE"));
 				alignedDetail.setWposlist(poslist.stream().map(pl -> {
 					PosItem pi = new PosItem();
 					pi.setN(pl.substring(0, 1));

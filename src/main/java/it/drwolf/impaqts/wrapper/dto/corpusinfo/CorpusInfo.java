@@ -33,6 +33,10 @@ public class CorpusInfo {
 	private String shortref;
 	private Map<String, String> sizes = new HashMap<>();
 	private String structctx;
+
+	// TODO
+	// private List structs;
+
 	private List<CorpusInfoStructure> structures = new ArrayList<>();
 	// TODO
 	// private List subcorpattrs = new ArrayList();
@@ -99,7 +103,7 @@ public class CorpusInfo {
 		return lang;
 	}
 
-	public List getLposlist() {
+	public List<String> getLposlist() {
 		return lposlist;
 	}
 
@@ -227,7 +231,7 @@ public class CorpusInfo {
 		this.lang = lang;
 	}
 
-	public void setLposlist(List lposlist) {
+	public void setLposlist(List<String> lposlist) {
 		this.lposlist = lposlist;
 	}
 

@@ -5,15 +5,15 @@ import java.util.List;
 
 public class AlignedDetail {
 	private String name;
-	private String language_name;
+	private String languageName;
 	private List<PosItem> wposlist = new ArrayList<>();
 	private List<PosItem> lopslist = new ArrayList<>();
 	private boolean hasCase = false;
 	private boolean hasLemma = false;
 	private String tagsetdoc;
 
-	public String getLanguage_name() {
-		return language_name;
+	public String getLanguageName() {
+		return languageName;
 	}
 
 	public List<PosItem> getLopslist() {
@@ -48,8 +48,8 @@ public class AlignedDetail {
 		this.hasLemma = hasLemma;
 	}
 
-	public void setLanguage_name(String language_name) {
-		this.language_name = language_name;
+	public void setLanguageName(String languageName) {
+		this.languageName = languageName;
 	}
 
 	public void setLopslist(List<PosItem> lopslist) {

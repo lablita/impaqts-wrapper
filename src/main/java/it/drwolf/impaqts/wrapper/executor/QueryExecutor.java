@@ -705,6 +705,7 @@ public class QueryExecutor {
 					if (corpus !=null && !corpus.isEmpty()) {
 						this.getCorpusInfo(corpus);
 					}
+					break;
 				case CONTEXT_QUERY_REQUEST:
 				default:
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
