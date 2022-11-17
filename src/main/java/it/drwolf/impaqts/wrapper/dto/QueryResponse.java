@@ -1,5 +1,7 @@
 package it.drwolf.impaqts.wrapper.dto;
 
+import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusInfo;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,10 +14,15 @@ public class QueryResponse {
 	private Integer currentSize;
 	private List<String> metadataValues = new ArrayList<>();
 	private WideContextResponse wideContextResponse = new WideContextResponse();
+	private CorpusInfo corpusInfo = new CorpusInfo();
 	private ErrorResponse errorResponse;
 
 	public List<CollocationItem> getCollocations() {
 		return this.collocations;
+	}
+
+	public CorpusInfo getCorpusInfo() {
+		return corpusInfo;
 	}
 
 	public Integer getCurrentSize() {
@@ -52,6 +59,10 @@ public class QueryResponse {
 
 	public void setCollocations(List<CollocationItem> collocations) {
 		this.collocations = collocations;
+	}
+
+	public void setCorpusInfo(CorpusInfo corpusInfo) {
+		this.corpusInfo = corpusInfo;
 	}
 
 	public void setCurrentSize(Integer currentSize) {

@@ -26,8 +26,10 @@ import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.dto.TokenClassDTO;
 import it.drwolf.impaqts.wrapper.dto.WideContextRequest;
+import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusInfo;
 import it.drwolf.impaqts.wrapper.exceptions.TagPresentException;
 import it.drwolf.impaqts.wrapper.exceptions.TokenPresentException;
+import it.drwolf.impaqts.wrapper.executor.corpusinfo.CorpusInfoRetriever;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 import it.drwolf.impaqts.wrapper.query.QueryTag;
 import it.drwolf.impaqts.wrapper.query.QueryToken;
@@ -699,6 +701,10 @@ public class QueryExecutor {
 						this.executeWideContextQuery(queryRequest.getWideContextRequest());
 					}
 					break;
+				case CORPUS_INFO:
+					if (corpus !=null && !corpus.isEmpty()) {
+						this.getCorpusInfo(corpus);
+					}
 				case CONTEXT_QUERY_REQUEST:
 				default:
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
@@ -710,6 +716,16 @@ public class QueryExecutor {
 			e.printStackTrace();
 			throw e;
 		}
+	}
+
+	private void getCorpusInfo(String corpusName) throws JsonProcessingException {
+		System.out.println(String.format("### 1. Corpus info: %s", corpusName));
+		CorpusInfoRetriever corpusInfoRetriever = new CorpusInfoRetriever();
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.setCorpusInfo(corpusInfoRetriever.retrieveCorpusInfo(corpusName));
+		queryResponse.setInProgress(false);
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+		System.out.println(String.format("### 2. Finished  Corpus info: %s", corpusName));
 	}
 
 	private String oneLevelCrit(String prefix, String attr, String ctx, String pos, String fcode, String icase,
