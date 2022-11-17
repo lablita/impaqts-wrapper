@@ -18,7 +18,7 @@ import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.DescResponse;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
 import it.drwolf.impaqts.wrapper.dto.FrequencyOption;
-import it.drwolf.impaqts.wrapper.dto.FrequencyOutput;
+import it.drwolf.impaqts.wrapper.dto.FrequencyQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.FrequencyResultLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLineDTO;
@@ -260,7 +260,6 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
 		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
 				"up,g,err,corr", "doc", 100);
 		for (int linenum = 0; linenum < maxLine; linenum++) {
@@ -390,33 +389,17 @@ public class QueryExecutor {
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
-		//		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
-		//		final String frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
-		//		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
-		String crit = "doc.sito/ 0>0 doc.categoria/ 0>0";//da sostituire con della logica
-		concordance.sort(crit, false);
-		concordance.sync();
 
 		int count = concordance.size();
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "", "", "word,tag,lemma", "word",
-				"p,g,err,corr", "=doc.sito,=doc.categoria");
-
-		List<KWICLineDTO> kwicLineDTOList = this.elaboratingKWICLines(kl);
-		FrequencyOutput frequencyOutput = new FrequencyOutput();
-		frequencyOutput.setLines(kwicLineDTOList);
-		frequencyOutput.setFromP(1);
-		frequencyOutput.setConcSize(concordance.size());
-
-		boolean ml = true;
-		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end,
-				queryRequest.getFrequencyQueryRequest().getFreqOptList().size() > 0, 300, 0L));
-
 		boolean multiFreq = queryRequest.getQueryType()
 				.equals(QueryRequest.RequestType.MULTI_FREQUENCY_QUERY_REQUEST.toString());
+
+		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end, multiFreq, 300, 0L));
+
 		queryResponse.getFrequency()
 				.setOperation(multiFreq ?
 						QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString() :
@@ -441,8 +424,6 @@ public class QueryExecutor {
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
 		// un tempo minimo di esecuzione
-		//boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
-
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int whileCount = 1;
 		while (!concordance.finished()) {
@@ -452,12 +433,13 @@ public class QueryExecutor {
 		count = concordance.size();
 		List<DescResponse> descResponses = new ArrayList<>();
 		QueryResponse queryResponse = new QueryResponse();
+		FrequencyQueryRequest frequencyQueryRequest = queryRequest.getFrequencyQueryRequest();
 		queryResponse.setCurrentSize(count);
-		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getFreqOptList();
-		boolean positive = queryRequest.getFrequencyQueryRequest().isPositive();
+		List<FrequencyOption> frequencyOptionList = frequencyQueryRequest.getFreqOptList();
+		boolean positive = frequencyQueryRequest.isPositive();
 		boolean multiFreq = queryRequest.getQueryType()
 				.equals(QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString());
-		String category = queryRequest.getFrequencyQueryRequest().getCategory();
+		String category = frequencyQueryRequest.getCategory();
 		for (FrequencyOption freqOpt : frequencyOptionList) {
 			descResponses.add(
 					this.elaboratingContext4ConcordanciesFromFrequenciesPN(concordance, freqOpt, positive, multiFreq,
@@ -470,7 +452,6 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
 		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
 				"up,g,err,corr", "doc", 100);
 		for (int linenum = 0; linenum < maxLine; linenum++) {
@@ -491,8 +472,6 @@ public class QueryExecutor {
 		Thread.sleep(5);
 		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
 				(System.currentTimeMillis() - now)));
-		// Thread.sleep(8000);
-		// System.out.println("### Size: " + concordance.size());
 		concordance.delete();
 		corpus.delete();
 	}
@@ -619,21 +598,21 @@ public class QueryExecutor {
 				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
 	}
 
-	private String freqCritBuild(QueryRequest queryRequest) {
+	private String freqCritBuild(QueryRequest queryRequest, boolean multi) {
 		List<String> resList = new ArrayList<>();
-		if (!queryRequest.getFrequencyQueryRequest().getFreqOptList().isEmpty()) {
+		if (multi) {
+			//multi
 			List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getFreqOptList();
 			for (FrequencyOption frequencyOption : frequencyOptionList) {
 				resList.add(this.oneLevelCrit("", frequencyOption.getAttribute(), "",
 						this.fromAttributeToSymbolic(frequencyOption.getPosition()), "rc",
 						frequencyOption.getIgnoreCase() ? "i" : "", "e", ""));
 			}
-			//			return String.join(" ", resList);
+			return String.join(" ", resList);
 		} else {
-			//single type
-			//return queryRequest.getFrequencyQueryRequest().getCategories()
+			//metadata
+			return queryRequest.getFrequencyQueryRequest().getCategory();
 		}
-		return String.join(" ", resList);
 	}
 
 	private String fromAttributeToSymbolic(String attribute) {
@@ -784,21 +763,17 @@ public class QueryExecutor {
 
 	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, QueryRequest queryRequest, int start,
 			int end, boolean multi, int normWidth, long wlMaxFreq) {
-		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
-		final String frequencyType = queryRequest.getFrequencyQueryRequest().getFrequencyType();
-		final Integer frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
-		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
+		FrequencyQueryRequest frequencyQueryRequest = queryRequest.getFrequencyQueryRequest();
+		final int freqLimit = frequencyQueryRequest.getFrequencyLimit();
+		final String frequencyType = frequencyQueryRequest.getFrequencyType();
+		final Integer frequencyColSort = frequencyQueryRequest.getFrequencyColSort();
+		final String frequencyTypeSort = frequencyQueryRequest.getFrequencyTypeSort();
 		FrequencyItem result = new FrequencyItem();
 		StrVector words = new StrVector();
 		NumVector freqs = new NumVector();
 		NumVector norms = new NumVector();
 		List<FrequencyResultLine> frlList = new ArrayList<>();
-		String crit;
-		if (multi) {
-			crit = this.freqCritBuild(queryRequest);
-		} else {
-			crit = queryRequest.getFrequencyQueryRequest().getCategory();
-		}
+		String crit = this.freqCritBuild(queryRequest, multi);
 		corpus.freq_dist(concordance.RS(), crit + " 0", freqLimit, words, freqs, norms);
 		float[] toBars = this.computeCorrection(freqs, norms, normWidth, corpus);
 		int noRel = multi ? 1 : 0;
@@ -806,7 +781,8 @@ public class QueryExecutor {
 		long maxF = freqs.stream().max(Long::compareTo).orElse(0L);
 		wlMaxFreq = wlMaxFreq > 0 ? wlMaxFreq : maxF;
 
-		if (multi) {//multilevel
+		if (multi) {
+			//multilevel
 			for (int i = 0; i < words.size(); i++) {
 				if (freqs.get(i) <= wlMaxFreq) {
 					FrequencyResultLine frl = new FrequencyResultLine();
@@ -817,7 +793,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-		} else if (toBars[1] > 0F) {//text type
+		} else if (toBars[1] > 0F) {
+			//metadata
 			float maxR = this.calculateMaxRel(freqs, norms, toBars);
 			for (int i = 0; i < words.size(); i++) {
 				if (freqs.get(i) <= wlMaxFreq) {
@@ -837,12 +814,10 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest()
-					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
-					.getCategory()
+			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0 && frequencyQueryRequest.getCategory()
 					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
-				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
+				PosAttr attr = corpus.get_attr(frequencyQueryRequest.getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
 					allVals.add(attr.id2str(i));
 				}
@@ -864,6 +839,30 @@ public class QueryExecutor {
 				}
 			}
 		}
+		//Include Categories With No Hits
+		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null && frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
+				.equals(0)) {
+			PosAttr posAttr = corpus.get_attr(frequencyQueryRequest.getCategory());
+
+			for (int i = 0; i < posAttr.id_range(); i++) {
+				String attr = posAttr.id2str(i);
+				if (frlList.stream().anyMatch(item -> item.getWord().get(0).equals(attr))) {
+					continue;
+				}
+				FrequencyResultLine frequencyResultLine = new FrequencyResultLine();
+				frequencyResultLine.getWord().add(attr);
+				frequencyResultLine.setFreq(0L);
+				frequencyResultLine.setRel(0F);
+				frequencyResultLine.setNorm(0L);
+				frequencyResultLine.setnBar(0);
+				frequencyResultLine.setRelBar(0L);
+				frequencyResultLine.setNoRel(0L);
+				frequencyResultLine.setFreqBar(0L);
+				frequencyResultLine.setfBar(0L);
+				frlList.add(frequencyResultLine);
+			}
+		}
+
 		//sorting
 		List<FrequencyResultLine> frequencyItemList;
 		if ("freq".equals(frequencyType) || "rel".equals(frequencyType)) {
