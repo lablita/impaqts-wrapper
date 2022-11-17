@@ -155,8 +155,8 @@ public class QueryExecutor {
 		return descResponses;
 	}
 
-	private DescResponse elaboratingContextForConcordanciesFromFrequenciesPN(Concordance concordance,
-			FrequencyOption frequencyOption, boolean positive, boolean multiFreq) {
+	private DescResponse elaboratingContext4ConcordanciesFromFrequenciesPN(Concordance concordance,
+			FrequencyOption frequencyOption, boolean positive, boolean multiFreq, String category) {
 		// lcTx è sempre uguale a rcTx se non è NODE_CONTEXT
 		StringBuilder lcTx = new StringBuilder();
 		StringBuilder rcTx = new StringBuilder();
@@ -184,7 +184,7 @@ public class QueryExecutor {
 			rank = 1;
 			lcTx.append("0");
 			rcTx.append("0<0");
-			query = String.format("[] within %s;", frequencyOption.getTerm());
+			query = String.format("[] within <%s=\"%s\" />", category.replace(".", " "), frequencyOption.getTerm());
 		}
 		int collNum = concordance.numofcolls() + 1;
 		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), rank, false);
@@ -457,9 +457,11 @@ public class QueryExecutor {
 		boolean positive = queryRequest.getFrequencyQueryRequest().isPositive();
 		boolean multiFreq = queryRequest.getQueryType()
 				.equals(QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString());
+		String category = queryRequest.getFrequencyQueryRequest().getCategory();
 		for (FrequencyOption freqOpt : frequencyOptionList) {
-			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt, positive,
-					multiFreq));
+			descResponses.add(
+					this.elaboratingContext4ConcordanciesFromFrequenciesPN(concordance, freqOpt, positive, multiFreq,
+							category));
 		}
 		queryResponse.getDescResponses().addAll(descResponses);
 
