@@ -1,12 +1,15 @@
 package it.drwolf.impaqts.wrapper.executor.corpusinfo;
 
 import com.sketchengine.manatee.Corpus;
+import com.sketchengine.manatee.Structure;
 import it.drwolf.impaqts.wrapper.dto.corpusinfo.AlignedDetail;
 import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusAttribute;
 import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusInfo;
 import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusInfoAttribute;
 import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusInfoStructure;
 import it.drwolf.impaqts.wrapper.dto.corpusinfo.PosItem;
+import it.drwolf.impaqts.wrapper.dto.corpusinfo.StructInfo;
+import it.drwolf.impaqts.wrapper.dto.corpusinfo.StructItem;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -57,6 +60,7 @@ public class CorpusInfoRetriever {
 		corpusInfo.setSizes(this.getSizes(corpus));
 		corpusInfo.setStructctx(corpus.get_conf("STRUCTCTX"));
 		corpusInfo.setStructures(this.retrieveStructures(corpus, structList));
+		corpusInfo.setStructs(this.retrieveStructs(corpus, structList));
 		// TODO subcorpattrs
 		corpusInfo.setTagsetdoc(corpus.get_conf("TAGSETDOC"));
 		corpusInfo.setTermdef(corpus.get_conf("TERMDEF"));
@@ -65,6 +69,41 @@ public class CorpusInfoRetriever {
 		corpusInfo.setWsattr(corpus.get_conf("WSATTR"));
 		corpusInfo.setWsdef(corpus.get_conf("WSDEF"));
 		return corpusInfo;
+	}
+
+	private List<StructInfo> retrieveStructs(Corpus corpus, List<String> structList) {
+		List<StructInfo> structInfos = new ArrayList<>();
+		final List<String> structattrList = getListFromSplitValues(corpus.get_conf("STRUCTATTRLIST"));
+		structattrList.forEach(sa -> {
+			String[] tokens = sa.split("\\.");
+			if (tokens.length == 2 && structList.contains(tokens[0])) {
+				Structure structure = corpus.get_struct(tokens[0]);
+				Optional<StructInfo> sInfoOpt = structInfos.stream()
+						.filter(si -> si.getName().equals(tokens[0]))
+						.findFirst();
+				StructInfo structInfo = null;
+				if (sInfoOpt.isPresent()) {
+					structInfo = sInfoOpt.get();
+				} else {
+					structInfo = new StructInfo();
+					structInfo.setName(tokens[0]);
+					structInfo.setCount(structure.size());
+					structInfos.add(structInfo);
+				}
+				if (structure.size() > 0) {
+					String conf = corpus.get_conf(String.format("%s.%s.LABEL", tokens[0], tokens[1]));
+					if (conf == null || conf.isEmpty()) {
+						conf = tokens[1];
+					}
+					StructItem sItem = new StructItem();
+					sItem.setFullName(sa);
+					sItem.setName(conf);
+					sItem.setCount(structure.get_attr(tokens[1]).id_range());
+					structInfo.getStructItems().add(sItem);
+				}
+			}
+		});
+		return structInfos;
 	}
 
 	private List<CorpusInfoStructure> retrieveStructures(Corpus corpus, List<String> structList) {

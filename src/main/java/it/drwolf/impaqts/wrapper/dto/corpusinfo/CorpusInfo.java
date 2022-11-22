@@ -34,9 +34,7 @@ public class CorpusInfo {
 	private Map<String, String> sizes = new HashMap<>();
 	private String structctx;
 
-	// TODO
-	// private List structs;
-
+	private List<StructInfo> structs = new ArrayList<>();
 	private List<CorpusInfoStructure> structures = new ArrayList<>();
 	// TODO
 	// private List subcorpattrs = new ArrayList();
@@ -125,6 +123,10 @@ public class CorpusInfo {
 
 	public String getStructctx() {
 		return structctx;
+	}
+
+	public List<StructInfo> getStructs() {
+		return structs;
 	}
 
 	public List<CorpusInfoStructure> getStructures() {
@@ -257,6 +259,10 @@ public class CorpusInfo {
 
 	public void setStructctx(String structctx) {
 		this.structctx = structctx;
+	}
+
+	public void setStructs(List<StructInfo> structs) {
+		this.structs = structs;
 	}
 
 	public void setStructures(List<CorpusInfoStructure> structures) {
