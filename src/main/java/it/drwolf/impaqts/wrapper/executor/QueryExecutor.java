@@ -684,7 +684,7 @@ public class QueryExecutor {
 				QueryRequest.RequestType requestType = QueryRequest.RequestType.valueOf(queryRequest.getQueryType());
 
 				switch (requestType) {
-				case QUICK_SORT_REQUEST:
+				case SORT_REQUEST:
 					this.executeQuerySort(corpus, queryRequest);
 					break;
 				case COLLOCATION_REQUEST:
