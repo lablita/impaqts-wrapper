@@ -5,14 +5,14 @@ public class ContextConcordanceItem {
 	private Integer tokens;
 	private String term;
 	private String attribute; // WORD, LEMMA, ...
-	private String item;
+	private String lemmaFilterType; // ALL, ANY, NONE
 
 	public String getAttribute() {
 		return this.attribute;
 	}
 
-	public String getItem() {
-		return this.item;
+	public String getLemmaFilterType() {
+		return this.lemmaFilterType;
 	}
 
 	public String getTerm() {
@@ -31,8 +31,8 @@ public class ContextConcordanceItem {
 		this.attribute = attribute;
 	}
 
-	public void setItem(String item) {
-		this.item = item;
+	public void setLemmaFilterType(String item) {
+		this.lemmaFilterType = item;
 	}
 
 	public void setTerm(String term) {
@@ -45,5 +45,18 @@ public class ContextConcordanceItem {
 
 	public void setWindow(String window) {
 		this.window = window;
+	}
+
+	public enum LemmaFilterType {
+		ANY, ALL, NONE;
+
+		public static boolean contain(String dir) {
+			try {
+				QueryRequest.RequestType.valueOf(dir);
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+		}
 	}
 }

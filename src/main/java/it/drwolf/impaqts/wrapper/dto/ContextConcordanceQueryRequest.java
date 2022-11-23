@@ -7,7 +7,7 @@ public class ContextConcordanceQueryRequest {
 	private List<ContextConcordanceItem> items = new ArrayList<>();
 
 	public List<ContextConcordanceItem> getItems() {
-		return items;
+		return this.items;
 	}
 
 	public void setItems(List<ContextConcordanceItem> items) {

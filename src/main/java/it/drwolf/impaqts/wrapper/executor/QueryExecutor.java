@@ -13,11 +13,12 @@ import com.sketchengine.manatee.PosAttr;
 import com.sketchengine.manatee.StrVector;
 import it.drwolf.impaqts.wrapper.dto.CollocationItem;
 import it.drwolf.impaqts.wrapper.dto.CollocationQueryRequest;
+import it.drwolf.impaqts.wrapper.dto.ContextConcordanceItem;
 import it.drwolf.impaqts.wrapper.dto.ContextConcordanceQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.DescResponse;
 import it.drwolf.impaqts.wrapper.dto.FrequencyItem;
 import it.drwolf.impaqts.wrapper.dto.FrequencyOption;
-import it.drwolf.impaqts.wrapper.dto.FrequencyOutput;
+import it.drwolf.impaqts.wrapper.dto.FrequencyQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.FrequencyResultLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLineDTO;
@@ -78,6 +79,16 @@ public class QueryExecutor {
 		this.initMaps();
 	}
 
+	private static String getQuery4Context(ContextConcordanceItem cci) {
+		List<String> terms = Arrays.asList(cci.getTerm().split(" "));
+		StringBuilder queryBuilder = new StringBuilder("[");
+		queryBuilder.append(terms.stream()
+				.map(term -> String.format("%s=\"%s\"", cci.getAttribute(), term))
+				.collect(Collectors.joining("|")));
+		queryBuilder.append("];");
+		return queryBuilder.toString();
+	}
+
 	private float calculateMaxRel(NumVector freqs, NumVector norms, float[] toBars) {
 		float maxRel = 0F;
 		for (int index = 0; index < freqs.size(); index++) {
@@ -112,75 +123,78 @@ public class QueryExecutor {
 		}
 	}
 
-	private List<DescResponse> contextConcordance(Concordance concordance,
-			ContextConcordanceQueryRequest contextConcordanceQueryRequest) {
+	private List<DescResponse> contextConcordance(Concordance concordance, QueryRequest queryRequest) {
 		List<DescResponse> descResponses = new ArrayList<>();
-		contextConcordanceQueryRequest.getItems().forEach(item -> {
-			final String window = item.getWindow();
-			final Integer tokens = item.getTokens();
-			String lcTx = "";
-			String rcTx = "";
-			int rank;
-			if ("BOTH".equals(window)) {
-				lcTx += (-tokens);
-				rcTx += tokens;
-				rank = 1;
-			} else if ("LEFT".equals(window)) {
-				lcTx += (-tokens);
-				rcTx += "-1";
-				rank = -1;
-			} else {
-				lcTx = "1";
-				rcTx += tokens;
-				rank = 1;
+		ContextConcordanceQueryRequest contextConcordanceQueryRequest = queryRequest.getContextConcordanceQueryRequest();
+		if (QueryRequest.RequestType.CONTEXT_QUERY_REQUEST.toString().equals(queryRequest.getQueryType())) {
+			ContextConcordanceItem cci = contextConcordanceQueryRequest.getItems().get(0);
+			if (ContextConcordanceItem.LemmaFilterType.ALL.toString().equals(cci.getLemmaFilterType())) {
+				Arrays.asList(cci.getTerm().split(" ")).forEach(term -> {
+					String query = String.format("[%s=\"%s\"];", cci.getAttribute(), term);
+					this.singleContextConcordance(concordance, descResponses, cci,
+							DescResponse.OperationType.POSITIVE_FILTER, query, term);
+				});
+			} else if (ContextConcordanceItem.LemmaFilterType.ANY.toString().equals(cci.getLemmaFilterType())) {
+				String query = QueryExecutor.getQuery4Context(cci);
+				this.singleContextConcordance(concordance, descResponses, cci,
+						DescResponse.OperationType.POSITIVE_FILTER, query, cci.getTerm());
+			} else if (ContextConcordanceItem.LemmaFilterType.NONE.toString().equals(cci.getLemmaFilterType())) {
+				String query = QueryExecutor.getQuery4Context(cci);
+				this.singleContextConcordance(concordance, descResponses, cci,
+						DescResponse.OperationType.NEGATIVE_FILTER, query, cci.getTerm());
 			}
-			int collNum = concordance.numofcolls() + 1;
-			String query = String.format("[%s=\"%s\"];", item.getAttribute(), item.getTerm());
-			concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
-			concordance.delete_pnfilter(collNum, true);
-			DescResponse descResponse = new DescResponse();
-			descResponse.setNiceArg(item.getTerm());
-			descResponse.setTerm(item.getTerm());
-			descResponse.setAttribute(item.getAttribute());
-			descResponse.setWindow(window);
-			descResponse.setTokens(tokens);
-			descResponse.setSize(concordance.size());
-			descResponses.add(descResponse);
-		});
+		} else {
+			contextConcordanceQueryRequest.getItems().forEach(cci -> {
+				String query = String.format("[%s=\"%s\"];", cci.getAttribute(), cci.getTerm());
+				this.singleContextConcordance(concordance, descResponses, cci,
+						DescResponse.OperationType.POSITIVE_FILTER, query, cci.getTerm());
+			});
+		}
 		return descResponses;
 	}
 
-	private DescResponse elaboratingContextForConcordanciesFromFrequenciesPN(Concordance concordance,
-			FrequencyOption frequencyOption) {
-		// lcTx è sempre uguale a rcTx se non è NODE_CONTEXT
-		String position = frequencyOption.getPosition();
+	private DescResponse elaboratingContext4ConcordanciesFromFrequenciesPN(Concordance concordance,
+			FrequencyOption frequencyOption, boolean positive, boolean multiFreq, String category) {
 		StringBuilder lcTx = new StringBuilder();
 		StringBuilder rcTx = new StringBuilder();
-		if (position != null) {
-			if (position.equals(QueryExecutor.NODE_CONTEXT)) {
-				lcTx.append("0");
-				rcTx.append("0>0");
-			} else if (position.endsWith("L") && position.length() > 1) {
-				lcTx.append("-");
-				String distance = position.substring(0, 1);
-				lcTx.append(distance).append("<0");
-				rcTx.append(lcTx);
-			} else if (position.endsWith("R") && position.length() > 1) {
-				String distance = position.substring(0, 1);
-				lcTx.append(distance).append(">0");
-				rcTx.append(lcTx);
+		Integer rank = 0;
+		String query;
+		if (multiFreq) {//MULTI_FREQ
+			String position = frequencyOption.getPosition();
+			if (position != null) {
+				if (position.equals(QueryExecutor.NODE_CONTEXT)) {
+					lcTx.append("0");
+					rcTx.append("0>0");
+				} else if (position.endsWith("L") && position.length() > 1) {
+					lcTx.append("-");
+					String distance = position.substring(0, 1);
+					lcTx.append(distance).append("<0");
+					rcTx.append(lcTx);
+				} else if (position.endsWith("R") && position.length() > 1) {
+					String distance = position.substring(0, 1);
+					lcTx.append(distance).append(">0");
+					rcTx.append(lcTx);
+				}
 			}
+			query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), frequencyOption.getTerm());
+		} else {//_TEXT_TYPE_FREQ
+			rank = 1;
+			lcTx.append("0");
+			rcTx.append("0<0");
+			query = String.format("[] within <%s=\"%s\" />", category.replace(".", " "), frequencyOption.getTerm());
 		}
 		int collNum = concordance.numofcolls() + 1;
-		String query = String.format("[%s=\"%s\"];", frequencyOption.getAttribute(), frequencyOption.getTerm());
-		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), 0, false);
-		concordance.delete_pnfilter(collNum, true);
+		concordance.set_collocation(collNum, query, lcTx.toString(), rcTx.toString(), rank, false);
+		concordance.delete_pnfilter(collNum, positive);
 		DescResponse descResponse = new DescResponse();
 		descResponse.setNiceArg(frequencyOption.getTerm());
 		descResponse.setPosition(frequencyOption.getPosition());
 		descResponse.setAttribute(frequencyOption.getAttribute());
 		descResponse.setTerm(frequencyOption.getTerm());
 		descResponse.setSize(concordance.size());
+		descResponse.setOperation(positive ?
+				DescResponse.OperationType.POSITIVE_FILTER.toString() :
+				DescResponse.OperationType.NEGATIVE_FILTER.toString());
 		return descResponse;
 	}
 
@@ -235,7 +249,7 @@ public class QueryExecutor {
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
 		if (withContextConcordance) {
-			descResponses = this.contextConcordance(concordance, queryRequest.getContextConcordanceQueryRequest());
+			descResponses = this.contextConcordance(concordance, queryRequest);
 			queryResponse.getDescResponses().addAll(descResponses);
 		}
 		List<KWICLine> kwicLines = new ArrayList<>();
@@ -243,7 +257,6 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
 		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
 				"up,g,err,corr", "doc", 100);
 		for (int linenum = 0; linenum < maxLine; linenum++) {
@@ -368,43 +381,33 @@ public class QueryExecutor {
 
 	}
 
-	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest)
-			throws InterruptedException, IOException {
+	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest) throws IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
-		//		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
-		//		final String frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
-		//		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
-		String crit = "doc.sito/ 0>0 doc.categoria/ 0>0";//da sostituire con della logica
-		concordance.sort(crit, false);
-		concordance.sync();
 
 		int count = concordance.size();
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "", "", "word,tag,lemma", "word",
-				"p,g,err,corr", "=doc.sito,=doc.categoria");
+		boolean multiFreq = queryRequest.getQueryType()
+				.equals(QueryRequest.RequestType.MULTI_FREQUENCY_QUERY_REQUEST.toString());
 
-		List<KWICLineDTO> kwicLineDTOList = this.elaboratingKWICLines(kl);
-		FrequencyOutput frequencyOutput = new FrequencyOutput();
-		frequencyOutput.setLines(kwicLineDTOList);
-		frequencyOutput.setFromP(1);
-		frequencyOutput.setConcSize(concordance.size());
+		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end, multiFreq, 300, 0L));
 
-		boolean ml = true;
-		queryResponse.setFrequency(this.xfreqDist(concordance, corpus, queryRequest, start, end,
-				queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().size() > 0, 300, 0L));
+		queryResponse.getFrequency()
+				.setOperation(multiFreq ?
+						QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString() :
+						QueryRequest.RequestType.PN_METADATA_FREQ_CONCORDANCE_QUERY_REQUEST.toString());
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		concordance.delete();
 		corpus.delete();
 	}
 
-	private void executeQueryPositiveFrequencyConcordance(String corpusName, QueryRequest queryRequest)
+	private void executeQueryPNFrequencyConcordance(String corpusName, QueryRequest queryRequest)
 			throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
@@ -418,8 +421,6 @@ public class QueryExecutor {
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
 		// un tempo minimo di esecuzione
-		//boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
-
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		int whileCount = 1;
 		while (!concordance.finished()) {
@@ -429,19 +430,25 @@ public class QueryExecutor {
 		count = concordance.size();
 		List<DescResponse> descResponses = new ArrayList<>();
 		QueryResponse queryResponse = new QueryResponse();
+		FrequencyQueryRequest frequencyQueryRequest = queryRequest.getFrequencyQueryRequest();
 		queryResponse.setCurrentSize(count);
-		List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getMultilevelFrequency();
-
+		List<FrequencyOption> frequencyOptionList = frequencyQueryRequest.getFreqOptList();
+		boolean positive = frequencyQueryRequest.isPositive();
+		boolean multiFreq = queryRequest.getQueryType()
+				.equals(QueryRequest.RequestType.PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST.toString());
+		String category = frequencyQueryRequest.getCategory();
 		for (FrequencyOption freqOpt : frequencyOptionList) {
-			descResponses.add(this.elaboratingContextForConcordanciesFromFrequenciesPN(concordance, freqOpt));
+			descResponses.add(
+					this.elaboratingContext4ConcordanciesFromFrequenciesPN(concordance, freqOpt, positive, multiFreq,
+							category));
 		}
 		queryResponse.getDescResponses().addAll(descResponses);
+
 		List<KWICLine> kwicLines = new ArrayList<>();
 		Integer maxLine = requestedSize;
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		//			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word", "s", "#", 100);
 		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
 				"up,g,err,corr", "doc", 100);
 		for (int linenum = 0; linenum < maxLine; linenum++) {
@@ -462,8 +469,6 @@ public class QueryExecutor {
 		Thread.sleep(5);
 		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
 				(System.currentTimeMillis() - now)));
-		// Thread.sleep(8000);
-		// System.out.println("### Size: " + concordance.size());
 		concordance.delete();
 		corpus.delete();
 	}
@@ -590,22 +595,21 @@ public class QueryExecutor {
 				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
 	}
 
-	private String freqCritBuild(QueryRequest queryRequest) {
+	private String freqCritBuild(QueryRequest queryRequest, boolean multi) {
 		List<String> resList = new ArrayList<>();
-		if (!queryRequest.getFrequencyQueryRequest().getMultilevelFrequency().isEmpty()) {
-			List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest()
-					.getMultilevelFrequency();
+		if (multi) {
+			//multi
+			List<FrequencyOption> frequencyOptionList = queryRequest.getFrequencyQueryRequest().getFreqOptList();
 			for (FrequencyOption frequencyOption : frequencyOptionList) {
 				resList.add(this.oneLevelCrit("", frequencyOption.getAttribute(), "",
 						this.fromAttributeToSymbolic(frequencyOption.getPosition()), "rc",
 						frequencyOption.getIgnoreCase() ? "i" : "", "e", ""));
 			}
-			//			return String.join(" ", resList);
+			return String.join(" ", resList);
 		} else {
-			//single type
-			//return queryRequest.getFrequencyQueryRequest().getCategories()
+			//metadata
+			return queryRequest.getFrequencyQueryRequest().getCategory();
 		}
-		return String.join(" ", resList);
 	}
 
 	private String fromAttributeToSymbolic(String attribute) {
@@ -682,18 +686,19 @@ public class QueryExecutor {
 				QueryRequest.RequestType requestType = QueryRequest.RequestType.valueOf(queryRequest.getQueryType());
 
 				switch (requestType) {
-				case QUICK_SORT_REQUEST:
+				case SORT_REQUEST:
 					this.executeQuerySort(corpus, queryRequest);
 					break;
 				case COLLOCATION_REQUEST:
 					this.executeQueryCollocation(corpus, queryRequest);
 					break;
-				case CONC_FREQUENCY_QUERY_REQUEST:
+				case METADATA_FREQUENCY_QUERY_REQUEST:
 				case MULTI_FREQUENCY_QUERY_REQUEST:
 					this.executeQueryFrequency(corpus, queryRequest);
 					break;
-				case POSITIVE_FREQUEQUENCY_CONCORDANCE_QUERY_REQUEST:
-					this.executeQueryPositiveFrequencyConcordance(corpus, queryRequest);
+				case PN_METADATA_FREQ_CONCORDANCE_QUERY_REQUEST:
+				case PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST:
+					this.executeQueryPNFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
 					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
@@ -757,6 +762,41 @@ public class QueryExecutor {
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 	}
 
+	private void singleContextConcordance(Concordance concordance, List<DescResponse> descResponses,
+			ContextConcordanceItem cci, DescResponse.OperationType operationType, String query, String term) {
+		final String window = cci.getWindow();
+		final Integer tokens = cci.getTokens();
+		String lcTx = "";
+		String rcTx = "";
+		int rank;
+		if ("BOTH".equals(window)) {
+			lcTx += (-tokens);
+			rcTx += tokens;
+			rank = 1;
+		} else if ("LEFT".equals(window)) {
+			lcTx += (-tokens);
+			rcTx += "-1";
+			rank = -1;
+		} else {
+			lcTx = "1";
+			rcTx += tokens;
+			rank = 1;
+		}
+		int collNum = concordance.numofcolls() + 1;
+		concordance.set_collocation(collNum, query, lcTx, rcTx, rank, true);
+		concordance.delete_pnfilter(collNum, operationType.equals(DescResponse.OperationType.POSITIVE_FILTER));
+		DescResponse descResponse = new DescResponse();
+		descResponse.setNiceArg(term.replace(" ", ", "));
+		descResponse.setTerm(term);
+		descResponse.setAttribute(cci.getAttribute());
+		descResponse.setWindow(window);
+		descResponse.setTokens(tokens);
+		descResponse.setSize(concordance.size());
+		//TODO to check
+		descResponse.setOperation(operationType.toString());
+		descResponses.add(descResponse);
+	}
+
 	private List<TokenClassDTO> tokens2StrClass(StrVector strVector) {
 		List<TokenClassDTO> tokenClassDTOList = new ArrayList<>();
 		for (int i = 0; i < strVector.size(); i += 2) {
@@ -770,21 +810,17 @@ public class QueryExecutor {
 
 	private FrequencyItem xfreqDist(Concordance concordance, Corpus corpus, QueryRequest queryRequest, int start,
 			int end, boolean multi, int normWidth, long wlMaxFreq) {
-		final int freqLimit = queryRequest.getFrequencyQueryRequest().getFrequencyLimit();
-		final String frequencyType = queryRequest.getFrequencyQueryRequest().getFrequencyType();
-		final Integer frequencyColSort = queryRequest.getFrequencyQueryRequest().getFrequencyColSort();
-		final String frequencyTypeSort = queryRequest.getFrequencyQueryRequest().getFrequencyTypeSort();
+		FrequencyQueryRequest frequencyQueryRequest = queryRequest.getFrequencyQueryRequest();
+		final int freqLimit = frequencyQueryRequest.getFrequencyLimit();
+		final String frequencyType = frequencyQueryRequest.getFrequencyType();
+		final Integer frequencyColSort = frequencyQueryRequest.getFrequencyColSort();
+		final String frequencyTypeSort = frequencyQueryRequest.getFrequencyTypeSort();
 		FrequencyItem result = new FrequencyItem();
 		StrVector words = new StrVector();
 		NumVector freqs = new NumVector();
 		NumVector norms = new NumVector();
 		List<FrequencyResultLine> frlList = new ArrayList<>();
-		String crit;
-		if (multi) {
-			crit = this.freqCritBuild(queryRequest);
-		} else {
-			crit = queryRequest.getFrequencyQueryRequest().getCategory();
-		}
+		String crit = this.freqCritBuild(queryRequest, multi);
 		corpus.freq_dist(concordance.RS(), crit + " 0", freqLimit, words, freqs, norms);
 		float[] toBars = this.computeCorrection(freqs, norms, normWidth, corpus);
 		int noRel = multi ? 1 : 0;
@@ -792,7 +828,8 @@ public class QueryExecutor {
 		long maxF = freqs.stream().max(Long::compareTo).orElse(0L);
 		wlMaxFreq = wlMaxFreq > 0 ? wlMaxFreq : maxF;
 
-		if (multi) {//multilevel
+		if (multi) {
+			//multilevel
 			for (int i = 0; i < words.size(); i++) {
 				if (freqs.get(i) <= wlMaxFreq) {
 					FrequencyResultLine frl = new FrequencyResultLine();
@@ -803,7 +840,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-		} else if (toBars[1] > 0F) {//text type
+		} else if (toBars[1] > 0F) {
+			//metadata
 			float maxR = this.calculateMaxRel(freqs, norms, toBars);
 			for (int i = 0; i < words.size(); i++) {
 				if (freqs.get(i) <= wlMaxFreq) {
@@ -823,12 +861,10 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (queryRequest.getFrequencyQueryRequest()
-					.getIncludeCategoriesWithNoHits() && freqLimit == 0 && queryRequest.getFrequencyQueryRequest()
-					.getCategory()
+			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0 && frequencyQueryRequest.getCategory()
 					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
-				PosAttr attr = corpus.get_attr(queryRequest.getFrequencyQueryRequest().getCategory());
+				PosAttr attr = corpus.get_attr(frequencyQueryRequest.getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
 					allVals.add(attr.id2str(i));
 				}
@@ -848,6 +884,29 @@ public class QueryExecutor {
 					frl.setRel(0);
 					frlList.add(frl);
 				}
+			}
+		}
+		//Include Categories With No Hits
+		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null && frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
+				.equals(0)) {
+			PosAttr posAttr = corpus.get_attr(frequencyQueryRequest.getCategory());
+
+			for (int i = 0; i < posAttr.id_range(); i++) {
+				String attr = posAttr.id2str(i);
+				if (frlList.stream().anyMatch(item -> item.getWord().get(0).equals(attr))) {
+					continue;
+				}
+				FrequencyResultLine frequencyResultLine = new FrequencyResultLine();
+				frequencyResultLine.getWord().add(attr);
+				frequencyResultLine.setFreq(0L);
+				frequencyResultLine.setRel(0F);
+				frequencyResultLine.setNorm(0L);
+				frequencyResultLine.setnBar(0);
+				frequencyResultLine.setRelBar(0L);
+				frequencyResultLine.setNoRel(0L);
+				frequencyResultLine.setFreqBar(0L);
+				frequencyResultLine.setfBar(0L);
+				frlList.add(frequencyResultLine);
 			}
 		}
 		//sorting
