@@ -27,7 +27,6 @@ import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.dto.TokenClassDTO;
 import it.drwolf.impaqts.wrapper.dto.WideContextRequest;
-import it.drwolf.impaqts.wrapper.dto.corpusinfo.CorpusInfo;
 import it.drwolf.impaqts.wrapper.exceptions.TagPresentException;
 import it.drwolf.impaqts.wrapper.exceptions.TokenPresentException;
 import it.drwolf.impaqts.wrapper.executor.corpusinfo.CorpusInfoRetriever;
@@ -236,6 +235,7 @@ public class QueryExecutor {
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
 		// un tempo minimo di esecuzione
 		boolean withContextConcordance = queryRequest.getContextConcordanceQueryRequest() != null;
+		boolean withConcordanceFilter = queryRequest.getFilterConcordanceQueryRequest() != null;
 
 		//while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
@@ -245,12 +245,16 @@ public class QueryExecutor {
 			System.out.println(String.format("### WHILE %d", whileCount++));
 		}
 		count = concordance.size();
-		List<DescResponse> descResponses;
 		QueryResponse queryResponse = new QueryResponse();
 		queryResponse.setCurrentSize(count);
 		if (withContextConcordance) {
-			descResponses = this.contextConcordance(concordance, queryRequest);
+			List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
 			queryResponse.getDescResponses().addAll(descResponses);
+		}
+		if (withConcordanceFilter) {
+			//TODO
+			DescResponse descResponse = this.filterConcordance(concordance, queryRequest);
+			queryResponse.getDescResponses().add(descResponse);
 		}
 		List<KWICLine> kwicLines = new ArrayList<>();
 		Integer maxLine = requestedSize;
@@ -595,6 +599,37 @@ public class QueryExecutor {
 				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
 	}
 
+	private DescResponse filterConcordance(Concordance concordance, QueryRequest queryRequest) {
+		DescResponse descResponses = new DescResponse();
+		ContextConcordanceQueryRequest contextConcordanceQueryRequest = queryRequest.getContextConcordanceQueryRequest();
+
+		//		if (QueryRequest.RequestType.CONTEXT_QUERY_REQUEST.toString().equals(queryRequest.getQueryType())) {
+		//			ContextConcordanceItem cci = contextConcordanceQueryRequest.getItems().get(0);
+		//			if (ContextConcordanceItem.LemmaFilterType.ALL.toString().equals(cci.getLemmaFilterType())) {
+		//				Arrays.asList(cci.getTerm().split(" ")).forEach(term -> {
+		//					String query = String.format("[%s=\"%s\"];", cci.getAttribute(), term);
+		//					this.singleContextConcordance(concordance, descResponses, cci,
+		//							DescResponse.OperationType.POSITIVE_FILTER, query, term);
+		//				});
+		//			} else if (ContextConcordanceItem.LemmaFilterType.ANY.toString().equals(cci.getLemmaFilterType())) {
+		//				String query = QueryExecutor.getQuery4Context(cci);
+		//				this.singleContextConcordance(concordance, descResponses, cci,
+		//						DescResponse.OperationType.POSITIVE_FILTER, query, cci.getTerm());
+		//			} else if (ContextConcordanceItem.LemmaFilterType.NONE.toString().equals(cci.getLemmaFilterType())) {
+		//				String query = QueryExecutor.getQuery4Context(cci);
+		//				this.singleContextConcordance(concordance, descResponses, cci,
+		//						DescResponse.OperationType.NEGATIVE_FILTER, query, cci.getTerm());
+		//			}
+		//		} else {
+		//			contextConcordanceQueryRequest.getItems().forEach(cci -> {
+		//				String query = String.format("[%s=\"%s\"];", cci.getAttribute(), cci.getTerm());
+		//				this.singleContextConcordance(concordance, descResponses, cci,
+		//						DescResponse.OperationType.POSITIVE_FILTER, query, cci.getTerm());
+		//			});
+		//		}
+		return descResponses;
+	}
+
 	private String freqCritBuild(QueryRequest queryRequest, boolean multi) {
 		List<String> resList = new ArrayList<>();
 		if (multi) {
@@ -622,6 +657,16 @@ public class QueryExecutor {
 			//right
 			return String.format(" %s", attribute.substring(0, 1));
 		}
+	}
+
+	private void getCorpusInfo(String corpusName) throws JsonProcessingException {
+		System.out.println(String.format("### 1. Corpus info: %s", corpusName));
+		CorpusInfoRetriever corpusInfoRetriever = new CorpusInfoRetriever();
+		QueryResponse queryResponse = new QueryResponse();
+		queryResponse.setCorpusInfo(corpusInfoRetriever.retrieveCorpusInfo(corpusName));
+		queryResponse.setInProgress(false);
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+		System.out.println(String.format("### 2. Finished  Corpus info: %s", corpusName));
 	}
 
 	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
@@ -707,11 +752,14 @@ public class QueryExecutor {
 					}
 					break;
 				case CORPUS_INFO:
-					if (corpus !=null && !corpus.isEmpty()) {
+					if (corpus != null && !corpus.isEmpty()) {
 						this.getCorpusInfo(corpus);
 					}
 					break;
 				case CONTEXT_QUERY_REQUEST:
+				case VISUAL_QUERY_REQUEST:
+				case TEXTUAL_QUERY_REQUEST:
+				case FILTER_CONCORDANCE_QUERY_REQUEST: // forse non serve
 				default:
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, queryRequest);
@@ -722,16 +770,6 @@ public class QueryExecutor {
 			e.printStackTrace();
 			throw e;
 		}
-	}
-
-	private void getCorpusInfo(String corpusName) throws JsonProcessingException {
-		System.out.println(String.format("### 1. Corpus info: %s", corpusName));
-		CorpusInfoRetriever corpusInfoRetriever = new CorpusInfoRetriever();
-		QueryResponse queryResponse = new QueryResponse();
-		queryResponse.setCorpusInfo(corpusInfoRetriever.retrieveCorpusInfo(corpusName));
-		queryResponse.setInProgress(false);
-		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
-		System.out.println(String.format("### 2. Finished  Corpus info: %s", corpusName));
 	}
 
 	private String oneLevelCrit(String prefix, String attr, String ctx, String pos, String fcode, String icase,
