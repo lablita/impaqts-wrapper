@@ -8,24 +8,14 @@
 image: maven:3-amazoncorretto-11
 
 pipelines:
-  default:
-    - parallel:
+  branches:
+    develop:
       - step:
-          name: Build and Test
+          name: Sonar
           caches:
             - maven
           script:
-            - mvn -B verify --file pom.xml
-          after-script:
-              # Collect checkstyle results, if any, and convert to Bitbucket Code Insights.
-            - pipe: atlassian/checkstyle-report:0.3.0
-      - step:
-          name: Security Scan
-          script:
-            # Run a security scan for sensitive data.
-            # See more security tools at https://bitbucket.org/product/features/pipelines/integrations?&category=security
-            - pipe: atlassian/git-secrets-scan:0.5.1
-  branches:
+            - mvn compile sonar:sonar -Dsonar.host.url=https://sonar.drwolf.it -Dsonar.login=8d70216bd83bfc0185fcd8bb2c0e4dd92b3f0c57
     master:
       - step:
           name: Deploy to production
@@ -33,11 +23,10 @@ pipelines:
           caches:
             - maven
           script:
-            - mvn clean compile package
+            - mvn -DskipTests clean compile package
             - pipe: atlassian/scp-deploy:1.2.1
               variables:
                 USER: 'drwolf'
-                SERVER: 'impaqts-be.cloudvm.it'
+                SERVER: 'impaqts.cloudvm.it'
                 REMOTE_PATH: '/home/drwolf/wrapper/ImpaqtsWrapper-jar-with-dependencies.jar'
                 LOCAL_PATH: '${BITBUCKET_CLONE_DIR}/target/ImpaqtsWrapper-jar-with-dependencies.jar'
-        
