@@ -3,6 +3,8 @@ package it.drwolf.impaqts.wrapper.dto;
 import it.drwolf.impaqts.wrapper.query.QueryPattern;
 
 public class QueryRequest {
+
+	private String id; // uuid
 	private String corpusMetadatum;
 	private Integer start = 0;
 	private Integer end = 0;
@@ -54,6 +56,10 @@ public class QueryRequest {
 
 	public FrequencyQueryRequest getFrequencyQueryRequest() {
 		return this.frequencyQueryRequest;
+	}
+
+	public String getId() {
+		return id;
 	}
 
 	public boolean getQueryInCql() {
@@ -123,6 +129,10 @@ public class QueryRequest {
 
 	public void setFrequencyQueryRequest(FrequencyQueryRequest frequencyQueryRequest) {
 		this.frequencyQueryRequest = frequencyQueryRequest;
+	}
+
+	public void setId(String id) {
+		this.id = id;
 	}
 
 	public void setQueryInCql(boolean queryInCql) {
