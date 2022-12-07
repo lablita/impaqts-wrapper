@@ -253,7 +253,7 @@ public class QueryExecutor {
 			int requestedSize, long now, List<KWICLine> sentKwicLines, boolean withContextConcordance,
 			boolean withConcordanceFilter) throws JsonProcessingException, InterruptedException {
 		int count;
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setId(queryRequest.getId());
 
 		if (withContextConcordance) {
@@ -381,7 +381,7 @@ public class QueryExecutor {
 					collocItems.next();
 				}
 			}
-			QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+			QueryResponse queryResponse = new QueryResponse(queryRequest);
 			queryResponse.setCurrentSize(resultCollocations.size());
 			queryResponse.setCollocations(resultCollocations);
 			queryResponse.setInProgress(!concordance.finished());
@@ -401,7 +401,7 @@ public class QueryExecutor {
 		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
 
 		int count = concordance.size();
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setCurrentSize(count);
 		boolean multiFreq = queryRequest.getQueryType()
 				.equals(QueryRequest.RequestType.MULTI_FREQUENCY_QUERY_REQUEST.toString());
@@ -440,7 +440,7 @@ public class QueryExecutor {
 		}
 		count = concordance.size();
 		List<DescResponse> descResponses = new ArrayList<>();
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		FrequencyQueryRequest frequencyQueryRequest = queryRequest.getFrequencyQueryRequest();
 		queryResponse.setCurrentSize(count);
 		List<FrequencyOption> frequencyOptionList = frequencyQueryRequest.getFreqOptList();
@@ -549,7 +549,7 @@ public class QueryExecutor {
 				(System.currentTimeMillis() - now)));
 		List<KWICLine> kwicLines = new ArrayList<>();
 		count = concordance.size();
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setCurrentSize(count);
 		Integer maxLine = 4000;
 		if (maxLine > count) {
@@ -597,7 +597,7 @@ public class QueryExecutor {
 		String leftContext = leftRegion.stream().collect(Collectors.joining(" "));
 		String kwicContext = kwicRegion.stream().collect(Collectors.joining(" "));
 		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.getWideContextResponse().setLeftContext(ContextUtils.removeContextTags(leftContext));
 		queryResponse.getWideContextResponse().setKwic(ContextUtils.removeContextTags(kwicContext));
 		queryResponse.getWideContextResponse().setRightContext(ContextUtils.removeContextTags(rightContext));
@@ -671,7 +671,7 @@ public class QueryExecutor {
 		final String corpusName = queryRequest.getCorpus();
 		System.out.println(String.format("### 1. Corpus info: %s", corpusName));
 		CorpusInfoRetriever corpusInfoRetriever = new CorpusInfoRetriever();
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setCorpusInfo(corpusInfoRetriever.retrieveCorpusInfo(corpusName));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
@@ -799,7 +799,7 @@ public class QueryExecutor {
 		final Corpus corpus = new Corpus(corpusName);
 		PosAttr posAttr = corpus.get_attr(queryRequest.getCorpusMetadatum());
 		final int posAttrRange = posAttr.id_range();
-		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		for (int i = 0; i < posAttrRange; i++) {
 			if (posAttr.freq(i) > 0) {
 				queryResponse.getMetadataValues().add(posAttr.id2str(i));
