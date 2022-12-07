@@ -23,7 +23,8 @@ public class QueryTag {
 	boolean containsValue = false; // il tag deve contenere value
 	boolean matchCase = true; // il valore non ignora maiuscole/minuscole
 	boolean negation = false; // il token è != e non =
-
+	boolean regexp = false;
+	boolean noregexp = false;
 	String defaultAttributeCQL;
 
 	public QueryTag() {
@@ -123,6 +124,34 @@ public class QueryTag {
 		return this.value;
 	}
 
+	public boolean isContainsValue() {
+		return this.containsValue;
+	}
+
+	public boolean isEndsWithValue() {
+		return this.endsWithValue;
+	}
+
+	public boolean isMatchCase() {
+		return this.matchCase;
+	}
+
+	public boolean isNegation() {
+		return this.negation;
+	}
+
+	public boolean isNoregexp() {
+		return this.noregexp;
+	}
+
+	public boolean isRegexp() {
+		return this.regexp;
+	}
+
+	public boolean isStartsWithValue() {
+		return this.startsWithValue;
+	}
+
 	public void setContainsValue(boolean x) {
 		this.containsValue = x;
 	}
@@ -145,6 +174,14 @@ public class QueryTag {
 
 	public void setNegation(boolean negation) {
 		this.negation = negation;
+	}
+
+	public void setNoregexp(boolean noregexp) {
+		this.noregexp = noregexp;
+	}
+
+	public void setRegexp(boolean regexp) {
+		this.regexp = regexp;
 	}
 
 	public void setStartsWithValue(boolean x) {
