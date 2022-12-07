@@ -238,55 +238,59 @@ public class QueryExecutor {
 		boolean withConcordanceFilter = queryRequest.getFilterConcordanceQueryRequest() != null;
 
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
-		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
-			int whileCount = 1;
-//			while (!concordance.finished()) {
-//				Thread.sleep(50);
-//				System.out.println(String.format("### WHILE %d", whileCount++));
-//			}
-			count = concordance.size();
-			Integer maxLine = requestedSize;
-			if (maxLine > count) {
-				maxLine = count;
-			}
-			QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
-			queryResponse.setId(queryRequest.getId());
-			queryResponse.setCurrentSize(count);
-			if (withContextConcordance) {
-				List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
-				queryResponse.getDescResponses().addAll(descResponses);
-			}
-			if (withConcordanceFilter) {
-				//TODO
-				DescResponse descResponse = this.filterConcordance(concordance, queryRequest);
-				queryResponse.getDescResponses().add(descResponse);
-			}
-			List<KWICLine> kwicLines = new ArrayList<>();
-			KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
-					"up,g,err,corr", "doc", 100);
-			for (int linenum = 0; linenum < maxLine; linenum++) {
-				if (!kl.nextline()) {
-					break;
-				}
-				KWICLine kwicLine = new KWICLine(kl);
-				kwicLines.add(kwicLine);
-			}
-			if (!sentKwicLines.equals(kwicLines)) {
-				queryResponse.getKwicLines().addAll(kwicLines);
-				sentKwicLines.clear();
-				sentKwicLines.addAll(kwicLines);
-			}
-			queryResponse.setInProgress(!concordance.finished());
-
-			System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
-			Thread.sleep(5);
-			System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
-					(System.currentTimeMillis() - now)));
+		Thread.sleep(50 );
+		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME+200) {
+			executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
+					withContextConcordance, withConcordanceFilter);
 		}
-		// Thread.sleep(8000);
-		// System.out.println("### Size: " + concordance.size());
+		executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
+				withContextConcordance, withConcordanceFilter);
 		concordance.delete();
 		corpus.delete();
+	}
+
+	private void executeQueryStep(QueryRequest queryRequest, Corpus corpus, int start, int end, Concordance concordance,
+			int requestedSize, long now, List<KWICLine> sentKwicLines, boolean withContextConcordance,
+			boolean withConcordanceFilter) throws JsonProcessingException, InterruptedException {
+		int count;
+		QueryResponse queryResponse = new QueryResponse(queryRequest.getId());
+		queryResponse.setId(queryRequest.getId());
+
+		if (withContextConcordance) {
+			List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
+			queryResponse.getDescResponses().addAll(descResponses);
+		}
+		if (withConcordanceFilter) {
+			//TODO
+			DescResponse descResponse = this.filterConcordance(concordance, queryRequest);
+			queryResponse.getDescResponses().add(descResponse);
+		}
+		List<KWICLine> kwicLines = new ArrayList<>();
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+				"up,g,err,corr", "doc", 100);
+		count = concordance.size();
+		Integer maxLine = requestedSize;
+		if (maxLine > count) {
+			maxLine = count;
+		}
+		for (int linenum = 0; linenum < maxLine; linenum++) {
+			if (!kl.nextline()) {
+				break;
+			}
+			KWICLine kwicLine = new KWICLine(kl);
+			kwicLines.add(kwicLine);
+		}
+		if (!sentKwicLines.equals(kwicLines)) {
+			queryResponse.getKwicLines().addAll(kwicLines);
+			sentKwicLines.clear();
+			sentKwicLines.addAll(kwicLines);
+		}
+		Thread.sleep(500);
+		queryResponse.setCurrentSize(concordance.size());
+		queryResponse.setInProgress(!concordance.finished());
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
+		System.out.println(String.format("### 2. Finished: %s\t Time: %d\t Size: %d", "" + concordance.finished(),
+				(System.currentTimeMillis() - now), concordance.fullsize()));
 	}
 
 	private void executeQueryCollocation(String corpusName, QueryRequest queryRequest)
