@@ -817,24 +817,22 @@ public class QueryExecutor {
 
 	private String retrieveStartTime(Long pos, Corpus corpus) {
 		String[] fullrefs = corpus.get_conf("FULLREF").split(",");
-		for (int i = 0; i < fullrefs.length; i++) {
-			String n = fullrefs[i];
-			if (n.equals("time.start")) {
-				return corpus.get_attr(n).pos2str(pos);
-			}
-		}
-		return "";
+		return Arrays.asList(fullrefs)
+				.stream()
+				.filter(n -> "time.start".equals(n))
+				.map(n -> corpus.get_attr(n).pos2str(pos))
+				.findFirst()
+				.orElse(null);
 	}
 
 	private String retrieveVideoUrl(Long pos, Corpus corpus) {
 		String[] fullrefs = corpus.get_conf("FULLREF").split(",");
-		for (int i = 0; i < fullrefs.length; i++) {
-			String n = fullrefs[i];
-			if (n.equals("doc.parlante")) {
-				return corpus.get_attr(n).pos2str(pos);
-			}
-		}
-		return "";
+		return Arrays.asList(fullrefs)
+				.stream()
+				.filter(n -> "doc.url".equals(n))
+				.map(n -> corpus.get_attr(n).pos2str(pos))
+				.findFirst()
+				.orElse(null);
 	}
 
 	private void singleContextConcordance(Concordance concordance, List<DescResponse> descResponses,
