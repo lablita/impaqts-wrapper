@@ -43,6 +43,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -80,12 +81,10 @@ public class QueryExecutor {
 
 	private static String getQuery4Context(ContextConcordanceItem cci) {
 		List<String> terms = Arrays.asList(cci.getTerm().split(" "));
-		StringBuilder queryBuilder = new StringBuilder("[");
-		queryBuilder.append(terms.stream()
+		String queryBuilder = "[" + terms.stream()
 				.map(term -> String.format("%s=\"%s\"", cci.getAttribute(), term))
-				.collect(Collectors.joining("|")));
-		queryBuilder.append("];");
-		return queryBuilder.toString();
+				.collect(Collectors.joining("|")) + "];";
+		return queryBuilder;
 	}
 
 	private float calculateMaxRel(NumVector freqs, NumVector norms, float[] toBars) {
@@ -238,8 +237,9 @@ public class QueryExecutor {
 		boolean withConcordanceFilter = queryRequest.getFilterConcordanceQueryRequest() != null;
 
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
-		Thread.sleep(50 );
-		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME+200) {
+		Thread.sleep(50);
+		while (!concordance.finished()
+				|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
 			executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
 					withContextConcordance, withConcordanceFilter);
 		}
@@ -247,50 +247,6 @@ public class QueryExecutor {
 				withContextConcordance, withConcordanceFilter);
 		concordance.delete();
 		corpus.delete();
-	}
-
-	private void executeQueryStep(QueryRequest queryRequest, Corpus corpus, int start, int end, Concordance concordance,
-			int requestedSize, long now, List<KWICLine> sentKwicLines, boolean withContextConcordance,
-			boolean withConcordanceFilter) throws JsonProcessingException, InterruptedException {
-		int count;
-		QueryResponse queryResponse = new QueryResponse(queryRequest);
-		queryResponse.setId(queryRequest.getId());
-
-		if (withContextConcordance) {
-			List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
-			queryResponse.getDescResponses().addAll(descResponses);
-		}
-		if (withConcordanceFilter) {
-			//TODO
-			DescResponse descResponse = this.filterConcordance(concordance, queryRequest);
-			queryResponse.getDescResponses().add(descResponse);
-		}
-		List<KWICLine> kwicLines = new ArrayList<>();
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
-				"up,g,err,corr", "doc", 100);
-		count = concordance.size();
-		Integer maxLine = requestedSize;
-		if (maxLine > count) {
-			maxLine = count;
-		}
-		for (int linenum = 0; linenum < maxLine; linenum++) {
-			if (!kl.nextline()) {
-				break;
-			}
-			KWICLine kwicLine = new KWICLine(kl);
-			kwicLines.add(kwicLine);
-		}
-		if (!sentKwicLines.equals(kwicLines)) {
-			queryResponse.getKwicLines().addAll(kwicLines);
-			sentKwicLines.clear();
-			sentKwicLines.addAll(kwicLines);
-		}
-		Thread.sleep(500);
-		queryResponse.setCurrentSize(concordance.size());
-		queryResponse.setInProgress(!concordance.finished());
-		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
-		System.out.println(String.format("### 2. Finished: %s\t Time: %d\t Size: %d", "" + concordance.finished(),
-				(System.currentTimeMillis() - now), concordance.fullsize()));
 	}
 
 	private void executeQueryCollocation(String corpusName, QueryRequest queryRequest)
@@ -436,7 +392,7 @@ public class QueryExecutor {
 		int whileCount = 1;
 		while (!concordance.finished()) {
 			Thread.sleep(50);
-			System.out.println(String.format("### WHILE %d", whileCount++));
+			System.out.printf("### WHILE %d%n", whileCount++);
 		}
 		count = concordance.size();
 		List<DescResponse> descResponses = new ArrayList<>();
@@ -467,6 +423,8 @@ public class QueryExecutor {
 				break;
 			}
 			KWICLine kwicLine = new KWICLine(kl);
+			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
+			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
 		}
 		if (!sentKwicLines.equals(kwicLines)) {
@@ -478,8 +436,8 @@ public class QueryExecutor {
 
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
 		Thread.sleep(5);
-		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
-				(System.currentTimeMillis() - now)));
+		System.out.printf("### 2. Finished: %s\t Time: %d%n", "" + concordance.finished(),
+				(System.currentTimeMillis() - now));
 		concordance.delete();
 		corpus.delete();
 	}
@@ -545,8 +503,8 @@ public class QueryExecutor {
 		long now = System.currentTimeMillis();
 		List<KWICLine> sentKwicLines = new ArrayList<>();
 
-		System.out.println(String.format("### 1. Finished: %s\t Time: %d", "" + concordance.finished(),
-				(System.currentTimeMillis() - now)));
+		System.out.printf("### 1. Finished: %s\t Time: %d%n", "" + concordance.finished(),
+				(System.currentTimeMillis() - now));
 		List<KWICLine> kwicLines = new ArrayList<>();
 		count = concordance.size();
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
@@ -562,6 +520,8 @@ public class QueryExecutor {
 				break;
 			}
 			KWICLine kwicLine = new KWICLine(kl);
+			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
+			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
 		}
 
@@ -577,16 +537,62 @@ public class QueryExecutor {
 		queryResponse.setInProgress(!concordance.finished());
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
 		Thread.sleep(5);
-		System.out.println(String.format("### 2. Finished: %s\t Time: %d", "" + concordance.finished(),
-				(System.currentTimeMillis() - now)));
+		System.out.printf("### 2. Finished: %s\t Time: %d%n", "" + concordance.finished(),
+				(System.currentTimeMillis() - now));
 		concordance.delete();
 		corpus.delete();
 	}
 
+	private void executeQueryStep(QueryRequest queryRequest, Corpus corpus, int start, int end, Concordance concordance,
+			int requestedSize, long now, List<KWICLine> sentKwicLines, boolean withContextConcordance,
+			boolean withConcordanceFilter) throws JsonProcessingException, InterruptedException {
+		int count;
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
+		queryResponse.setId(queryRequest.getId());
+
+		if (withContextConcordance) {
+			List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
+			queryResponse.getDescResponses().addAll(descResponses);
+		}
+		if (withConcordanceFilter) {
+			//TODO
+			DescResponse descResponse = this.filterConcordance(concordance, queryRequest);
+			queryResponse.getDescResponses().add(descResponse);
+		}
+		List<KWICLine> kwicLines = new ArrayList<>();
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+				"up,g,err,corr", "doc", 100);
+		count = concordance.size();
+		Integer maxLine = requestedSize;
+		if (maxLine > count) {
+			maxLine = count;
+		}
+		for (int linenum = 0; linenum < maxLine; linenum++) {
+			if (!kl.nextline()) {
+				break;
+			}
+			KWICLine kwicLine = new KWICLine(kl);
+			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
+			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
+			kwicLines.add(kwicLine);
+		}
+		if (!sentKwicLines.equals(kwicLines)) {
+			queryResponse.getKwicLines().addAll(kwicLines);
+			sentKwicLines.clear();
+			sentKwicLines.addAll(kwicLines);
+		}
+		Thread.sleep(500);
+		queryResponse.setCurrentSize(concordance.size());
+		queryResponse.setInProgress(!concordance.finished());
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
+		System.out.printf("### 2. Finished: %s\t Time: %d\t Size: %d%n", "" + concordance.finished(),
+				(System.currentTimeMillis() - now), concordance.fullsize());
+	}
+
 	private void executeWideContextQuery(QueryRequest queryRequest) throws JsonProcessingException {
 		final WideContextRequest wideContextRequest = queryRequest.getWideContextRequest();
-		System.out.println(String.format("### 1. Wide context: %s %d %d", wideContextRequest.getCorpusName(),
-				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
+		System.out.printf("### 1. Wide context: %s %d %d%n", wideContextRequest.getCorpusName(),
+				wideContextRequest.getPos(), wideContextRequest.getHitlen());
 		final Corpus corpus = new Corpus(wideContextRequest.getCorpusName());
 		CorpRegion corpRegion = new CorpRegion(corpus, "word", "p,g,err,corr");
 		final Long pos = wideContextRequest.getPos();
@@ -603,8 +609,8 @@ public class QueryExecutor {
 		queryResponse.getWideContextResponse().setRightContext(ContextUtils.removeContextTags(rightContext));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
-		System.out.println(String.format("### 2. Finished Wide context: %s %d %d", wideContextRequest.getCorpusName(),
-				wideContextRequest.getPos(), wideContextRequest.getHitlen()));
+		System.out.printf("### 2. Finished Wide context: %s %d %d%n", wideContextRequest.getCorpusName(),
+				wideContextRequest.getPos(), wideContextRequest.getHitlen());
 	}
 
 	private DescResponse filterConcordance(Concordance concordance, QueryRequest queryRequest) {
@@ -660,22 +666,22 @@ public class QueryExecutor {
 			return " 0~0";
 		} else if (attribute.contains("L")) {
 			//left
-			return String.format(" -%s", attribute.substring(0, 1));
+			return String.format(" -%s", attribute.charAt(0));
 		} else {
 			//right
-			return String.format(" %s", attribute.substring(0, 1));
+			return String.format(" %s", attribute.charAt(0));
 		}
 	}
 
 	private void getCorpusInfo(QueryRequest queryRequest) throws JsonProcessingException {
 		final String corpusName = queryRequest.getCorpus();
-		System.out.println(String.format("### 1. Corpus info: %s", corpusName));
+		System.out.printf("### 1. Corpus info: %s%n", corpusName);
 		CorpusInfoRetriever corpusInfoRetriever = new CorpusInfoRetriever();
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setCorpusInfo(corpusInfoRetriever.retrieveCorpusInfo(corpusName));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
-		System.out.println(String.format("### 2. Finished  Corpus info: %s", corpusName));
+		System.out.printf("### 2. Finished  Corpus info: %s%n", corpusName);
 	}
 
 	private String getCqlFromQueryRequest(QueryRequest queryRequest) {
@@ -783,7 +789,7 @@ public class QueryExecutor {
 
 	private String oneLevelCrit(String prefix, String attr, String ctx, String pos, String fcode, String icase,
 			String bward, String empty) {
-		StringBuilder res = new StringBuilder("");
+		StringBuilder res = new StringBuilder();
 		res.append(String.format("%s%s/%s%s%s", prefix, attr, icase, bward, empty));
 		if (ctx.isEmpty()) {
 			ctx = String.format("%s%s", pos, this.fromCodes.get(fcode));
@@ -807,6 +813,26 @@ public class QueryExecutor {
 		}
 		queryResponse.setCurrentSize(queryResponse.getMetadataValues().size());
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+	}
+
+	private String retrieveStartTime(Long pos, Corpus corpus) {
+		String[] fullrefs = corpus.get_conf("FULLREF").split(",");
+		return Arrays.asList(fullrefs)
+				.stream()
+				.filter(n -> "time.start".equals(n))
+				.map(n -> corpus.get_attr(n).pos2str(pos))
+				.findFirst()
+				.orElse(null);
+	}
+
+	private String retrieveVideoUrl(Long pos, Corpus corpus) {
+		String[] fullrefs = corpus.get_conf("FULLREF").split(",");
+		return Arrays.asList(fullrefs)
+				.stream()
+				.filter(n -> "doc.url".equals(n))
+				.map(n -> corpus.get_attr(n).pos2str(pos))
+				.findFirst()
+				.orElse(null);
 	}
 
 	private void singleContextConcordance(Concordance concordance, List<DescResponse> descResponses,
@@ -920,7 +946,7 @@ public class QueryExecutor {
 						continue;
 					}
 					FrequencyResultLine frl = new FrequencyResultLine();
-					frl.setWord(Arrays.asList(new String[] { val }));
+					frl.setWord(Collections.singletonList(val));
 					frl.setFreq(0);
 					frl.setfBar(0);
 					frl.setNorm(0);

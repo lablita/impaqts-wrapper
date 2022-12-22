@@ -12,6 +12,8 @@ public class KWICLine {
 	private String kwic;
 	private List<String> rightContext;
 	private Long pos;
+	private String startTime;
+	private String videoUrl;
 
 	public KWICLine(String ref, List<String> leftContext, String kwic, List<String> rightContext) {
 		this.ref = ref;
@@ -37,9 +39,9 @@ public class KWICLine {
 			return false;
 		}
 		KWICLine kwicLine = (KWICLine) o;
-		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext()
-				.equals(kwicLine.getLeftContext()) && this.getKwic()
-				.equals(kwicLine.getKwic()) && this.getRightContext().equals(kwicLine.getRightContext());
+		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext().equals(kwicLine.getLeftContext())
+				&& this.getKwic().equals(kwicLine.getKwic()) && this.getRightContext()
+				.equals(kwicLine.getRightContext());
 	}
 
 	public String getKwic() {
@@ -60,6 +62,14 @@ public class KWICLine {
 
 	public List<String> getRightContext() {
 		return this.rightContext;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public String getVideoUrl() {
+		return videoUrl;
 	}
 
 	@Override
@@ -85,5 +95,13 @@ public class KWICLine {
 
 	public void setRightContext(List<String> rightContext) {
 		this.rightContext = rightContext;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public void setVideoUrl(String videoUrl) {
+		this.videoUrl = videoUrl;
 	}
 }
