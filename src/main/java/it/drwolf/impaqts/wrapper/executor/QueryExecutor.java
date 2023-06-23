@@ -21,7 +21,6 @@ import it.drwolf.impaqts.wrapper.dto.FrequencyOption;
 import it.drwolf.impaqts.wrapper.dto.FrequencyQueryRequest;
 import it.drwolf.impaqts.wrapper.dto.FrequencyResultLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLine;
-import it.drwolf.impaqts.wrapper.dto.KWICLineDTO;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
@@ -196,29 +195,6 @@ public class QueryExecutor {
 		return descResponse;
 	}
 
-	private List<KWICLineDTO> elaboratingKWICLines(KWICLines kl) {
-		int refsLen = 1;
-		StrVector refList = kl.get_ref_list();
-		List<KWICLineDTO> kwicLineDTOList = new ArrayList<>();
-		while (kl.nextline()) {
-			KWICLineDTO kwicLineDTO = new KWICLineDTO();
-			kwicLineDTO.setTokNum(kl.get_pos());
-			kwicLineDTO.setHitlen(kl.get_kwiclen());
-			if (refList.size() > 0) {
-				kwicLineDTO.setRefs(refList.subList(0, refsLen));
-				kwicLineDTO.setTblRefs(refList.subList(0, refsLen));
-			}
-			kwicLineDTO.setLeftLabel(this.tokens2StrClass(kl.get_left()));
-			kwicLineDTO.setKwic(this.tokens2StrClass(kl.get_kwic()));
-			kwicLineDTO.setRightLabel(this.tokens2StrClass(kl.get_right()));
-			kwicLineDTO.setLinks(new ArrayList<>());
-			kwicLineDTO.setLineGroup("_");
-			kwicLineDTO.setLineGroupId(0);
-		}
-
-		return kwicLineDTOList;
-	}
-
 	// corpusName, CQL, start, end
 	private void executeQuery(String corpusName, QueryRequest queryRequest) throws InterruptedException, IOException {
 		final Corpus corpus = new Corpus(corpusName);
@@ -238,12 +214,11 @@ public class QueryExecutor {
 
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		Thread.sleep(50);
-		while (!concordance.finished()
-				|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
-			executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
+		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
+			this.executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
 					withContextConcordance, withConcordanceFilter);
 		}
-		executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
+		this.executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
 				withContextConcordance, withConcordanceFilter);
 		concordance.delete();
 		corpus.delete();
@@ -268,8 +243,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			try (Stream<Path> cachePaths = Files.list(cachePath)) {
 				Optional<Path> pathWordOptional = cachePaths.filter(
 						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
@@ -280,8 +255,7 @@ public class QueryExecutor {
 					// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
 					concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 					long now = System.currentTimeMillis();
-					while (!concordance.finished()
-							|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+					while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 						Thread.sleep(5);
 					}
 					concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
@@ -616,31 +590,6 @@ public class QueryExecutor {
 	private DescResponse filterConcordance(Concordance concordance, QueryRequest queryRequest) {
 		DescResponse descResponses = new DescResponse();
 		ContextConcordanceQueryRequest contextConcordanceQueryRequest = queryRequest.getContextConcordanceQueryRequest();
-
-		//		if (QueryRequest.RequestType.CONTEXT_QUERY_REQUEST.toString().equals(queryRequest.getQueryType())) {
-		//			ContextConcordanceItem cci = contextConcordanceQueryRequest.getItems().get(0);
-		//			if (ContextConcordanceItem.LemmaFilterType.ALL.toString().equals(cci.getLemmaFilterType())) {
-		//				Arrays.asList(cci.getTerm().split(" ")).forEach(term -> {
-		//					String query = String.format("[%s=\"%s\"];", cci.getAttribute(), term);
-		//					this.singleContextConcordance(concordance, descResponses, cci,
-		//							DescResponse.OperationType.POSITIVE_FILTER, query, term);
-		//				});
-		//			} else if (ContextConcordanceItem.LemmaFilterType.ANY.toString().equals(cci.getLemmaFilterType())) {
-		//				String query = QueryExecutor.getQuery4Context(cci);
-		//				this.singleContextConcordance(concordance, descResponses, cci,
-		//						DescResponse.OperationType.POSITIVE_FILTER, query, cci.getTerm());
-		//			} else if (ContextConcordanceItem.LemmaFilterType.NONE.toString().equals(cci.getLemmaFilterType())) {
-		//				String query = QueryExecutor.getQuery4Context(cci);
-		//				this.singleContextConcordance(concordance, descResponses, cci,
-		//						DescResponse.OperationType.NEGATIVE_FILTER, query, cci.getTerm());
-		//			}
-		//		} else {
-		//			contextConcordanceQueryRequest.getItems().forEach(cci -> {
-		//				String query = String.format("[%s=\"%s\"];", cci.getAttribute(), cci.getTerm());
-		//				this.singleContextConcordance(concordance, descResponses, cci,
-		//						DescResponse.OperationType.POSITIVE_FILTER, query, cci.getTerm());
-		//			});
-		//		}
 		return descResponses;
 	}
 
@@ -761,8 +710,8 @@ public class QueryExecutor {
 					this.executeQueryPNFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
-					if (queryRequest.getWideContextRequest() != null
-							&& queryRequest.getWideContextRequest().getPos() != null) {
+					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
+							.getPos() != null) {
 						this.executeWideContextQuery(queryRequest);
 					}
 					break;
@@ -934,8 +883,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0
-					&& frequencyQueryRequest.getCategory().contains(".")) {
+			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0 && frequencyQueryRequest.getCategory()
+					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(frequencyQueryRequest.getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
@@ -960,8 +909,7 @@ public class QueryExecutor {
 			}
 		}
 		//Include Categories With No Hits
-		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null
-				&& frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
+		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null && frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
 				.equals(0)) {
 			PosAttr posAttr = corpus.get_attr(frequencyQueryRequest.getCategory());
 

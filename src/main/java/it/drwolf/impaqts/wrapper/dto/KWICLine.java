@@ -2,9 +2,11 @@ package it.drwolf.impaqts.wrapper.dto;
 
 import com.sketchengine.manatee.KWICLines;
 import it.drwolf.impaqts.wrapper.utils.ContextUtils;
+import org.jsoup.Jsoup;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class KWICLine {
 	private String ref;
@@ -24,8 +26,15 @@ public class KWICLine {
 
 	public KWICLine(KWICLines kwicLines) {
 		this.ref = kwicLines.get_refs();
-		this.leftContext = kwicLines.get_left();
-		this.rightContext = kwicLines.get_right();
+		//Remove HTML tag from left...
+		List<String> leftCtxRow = kwicLines.get_left();
+		leftCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
+		this.leftContext = leftCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
+		//...and right context
+		List<String> rightCtxRow = kwicLines.get_right();
+		rightCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
+		this.rightContext = rightCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
+
 		this.kwic = ContextUtils.strip_tags(kwicLines.get_kwic());
 		this.pos = kwicLines.get_pos();
 	}
@@ -39,9 +48,9 @@ public class KWICLine {
 			return false;
 		}
 		KWICLine kwicLine = (KWICLine) o;
-		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext().equals(kwicLine.getLeftContext())
-				&& this.getKwic().equals(kwicLine.getKwic()) && this.getRightContext()
-				.equals(kwicLine.getRightContext());
+		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext()
+				.equals(kwicLine.getLeftContext()) && this.getKwic()
+				.equals(kwicLine.getKwic()) && this.getRightContext().equals(kwicLine.getRightContext());
 	}
 
 	public String getKwic() {
@@ -53,7 +62,7 @@ public class KWICLine {
 	}
 
 	public Long getPos() {
-		return pos;
+		return this.pos;
 	}
 
 	public String getRef() {
@@ -65,11 +74,11 @@ public class KWICLine {
 	}
 
 	public String getStartTime() {
-		return startTime;
+		return this.startTime;
 	}
 
 	public String getVideoUrl() {
-		return videoUrl;
+		return this.videoUrl;
 	}
 
 	@Override
