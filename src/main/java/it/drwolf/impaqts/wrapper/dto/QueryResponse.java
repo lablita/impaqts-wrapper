@@ -14,11 +14,22 @@ public class QueryResponse {
 	private FrequencyItem frequency = new FrequencyItem();
 	private List<DescResponse> descResponses = new ArrayList<>();
 	private Boolean inProgress = Boolean.TRUE;
+
+	public WordListResponse getWordList() {
+		return wordList;
+	}
+
+	public void setWordList(WordListResponse wordList) {
+		this.wordList = wordList;
+	}
+
 	private Integer currentSize;
 	private List<String> metadataValues = new ArrayList<>();
 	private WideContextResponse wideContextResponse = new WideContextResponse();
 	private CorpusInfo corpusInfo = new CorpusInfo();
 	private ErrorResponse errorResponse;
+
+	private WordListResponse wordList = new WordListResponse();
 	public QueryResponse(QueryRequest queryRequest) {
 		this.id = queryRequest.getId();
 		this.start = queryRequest.getStart();

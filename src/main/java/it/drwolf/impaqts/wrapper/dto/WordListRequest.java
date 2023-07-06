@@ -16,8 +16,28 @@ public class WordListRequest {
 	private FigureType freqFigure;
 	private OutputType outputType;
 	private String kwRefCorpus;
+
+	public String getSortBy() {
+		return sortBy;
+	}
+
+	public void setSortBy(String sortBy) {
+		this.sortBy = sortBy;
+	}
+
+	public String getSortDir() {
+		return sortDir;
+	}
+
+	public void setSortDir(String sortDir) {
+		this.sortDir = sortDir;
+	}
+
 	private String kwRefSubCorpus;
 	private float commonWords;
+
+	private String sortBy;
+	private String sortDir;
 
 	private ChangeOutputAttrType changeOutFirst;
 	private ChangeOutputAttrType changeOutSecond;
