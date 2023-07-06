@@ -586,7 +586,7 @@ public class QueryExecutor {
         String searchAttribute = queryRequest.getWordListRequest().getSearchAttribute();
         Integer start = queryRequest.getStart();
         Integer end = queryRequest.getEnd();
-        String sortBy = queryRequest.getWordListRequest().getSortBy();
+        String sortBy = queryRequest.getWordListRequest().getSortField();
         String sortDir = queryRequest.getWordListRequest().getSortDir();
         queryRequest.getSortQueryRequest();
         Corpus corpus = new Corpus(corpusName);
@@ -612,7 +612,6 @@ public class QueryExecutor {
                 listItem = listItem.stream().sorted(Comparator.comparing(WordListItem::getWord)).collect(Collectors.toList());
             }
         }
-
 
         WordListResponse wordListResponse = new WordListResponse();
         wordListResponse.getItems().addAll(listItem.subList(start, end));
