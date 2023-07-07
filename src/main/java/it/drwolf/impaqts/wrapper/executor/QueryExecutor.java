@@ -588,40 +588,54 @@ public class QueryExecutor {
         Integer end = queryRequest.getEnd();
         String sortBy = queryRequest.getWordListRequest().getSortField();
         String sortDir = queryRequest.getWordListRequest().getSortDir();
+        Integer minFreq = queryRequest.getWordListRequest().getMinFreq();
+        Integer maxFreq = queryRequest.getWordListRequest().getMaxFreq();
+        String blackListStr = queryRequest.getWordListRequest().getBlackList();
+        List<String> blackList = new ArrayList<>();
+        if (blackListStr != null && blackListStr.length() > 0) {
+            blackList = List.of(blackListStr.split(","));
+        }
         queryRequest.getSortQueryRequest();
         Corpus corpus = new Corpus(corpusName);
         PosAttr posAttr = corpus.get_attr(searchAttribute);
-        Integer idRange = posAttr.id_range();
         List<WordListItem> listItem = new ArrayList<>();
-        for (int i = 0; i <= idRange; i++) {
+        IntGenerator intGenerator = posAttr.regexp2ids(".*", false, "[^[:alpha:]].*");
+        while (!intGenerator.end()) {
+            Integer id = intGenerator.next();
+            Long freq = posAttr.freq(id);
+            String word = posAttr.id2str(id);
+            if (freq == null || freq < minFreq || blackList.contains(word)) {
+                if (maxFreq < 1) {
+                    continue;
+                } else if (freq > maxFreq) {
+                    continue;
+                }
+            }
             WordListItem item = new WordListItem();
-            item.setWord(posAttr.id2str(i));
-            item.setFrequency(posAttr.freq(i));
+            item.setWord(posAttr.id2str(id));
+            item.setFrequency(freq);
             listItem.add(item);
         }
         if ("freq".equals(sortBy)) {
-            if ("asc".equals(sortDir)) {
+            if ("desc".equals(sortDir)) {
                 listItem = listItem.stream().sorted(Comparator.comparingLong(WordListItem::getFrequency).reversed()).collect(Collectors.toList());
             } else {// desc
                 listItem = listItem.stream().sorted(Comparator.comparingLong(WordListItem::getFrequency)).collect(Collectors.toList());
             }
         } else { // word, tag, lemma, ...
-            if ("asc".equals(sortDir)) {
-                listItem = listItem.stream().sorted(Comparator.comparing(WordListItem::getWord).reversed()).collect(Collectors.toList());
+            if ("desc".equals(sortDir)) {
+                listItem.sort(Comparator.comparing(WordListItem::getWord).reversed());
             } else {// desc
-                listItem = listItem.stream().sorted(Comparator.comparing(WordListItem::getWord)).collect(Collectors.toList());
+                listItem.sort(Comparator.comparing(WordListItem::getWord));
             }
         }
-
         WordListResponse wordListResponse = new WordListResponse();
         wordListResponse.getItems().addAll(listItem.subList(start, end));
         wordListResponse.setTotalItems(listItem.size());
         wordListResponse.setTotalFreqs(listItem.stream().mapToLong(i -> i.getFrequency()).sum());
-
         QueryResponse queryResponse = new QueryResponse(queryRequest);
         queryResponse.setId(queryRequest.getId());
         queryResponse.setWordList(wordListResponse);
-
         System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
         System.out.printf("### 2. Finished Word on corpus list: %s", corpus);
     }
