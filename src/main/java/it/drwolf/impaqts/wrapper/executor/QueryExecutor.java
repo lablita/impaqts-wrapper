@@ -633,6 +633,7 @@ public class QueryExecutor {
         wordListResponse.getItems().addAll(listItem.subList(start, end));
         wordListResponse.setTotalItems(listItem.size());
         wordListResponse.setTotalFreqs(listItem.stream().mapToLong(i -> i.getFrequency()).sum());
+        wordListResponse.setSearchAttribute(searchAttribute);
         QueryResponse queryResponse = new QueryResponse(queryRequest);
         queryResponse.setId(queryRequest.getId());
         queryResponse.setWordList(wordListResponse);

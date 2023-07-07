@@ -9,6 +9,16 @@ public class WordListResponse {
     private Integer totalItems;
     private Long totalFreqs;
 
+    private String searchAttribute;
+
+    public String getSearchAttribute() {
+        return searchAttribute;
+    }
+
+    public void setSearchAttribute(String searchAttribute) {
+        this.searchAttribute = searchAttribute;
+    }
+
     public Integer getTotalItems() {
         return totalItems;
     }
