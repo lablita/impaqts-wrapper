@@ -2,7 +2,6 @@ package it.drwolf.impaqts.wrapper.dto;
 
 import com.sketchengine.manatee.KWICLines;
 import it.drwolf.impaqts.wrapper.utils.ContextUtils;
-import org.jsoup.Jsoup;
 
 import java.util.List;
 import java.util.Objects;
@@ -28,12 +27,12 @@ public class KWICLine {
 		this.ref = kwicLines.get_refs();
 		//Remove HTML tag from left...
 		List<String> leftCtxRow = kwicLines.get_left();
-		leftCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
-		this.leftContext = leftCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
+		this.leftContext = leftCtxRow.stream().map(ln -> ln.replaceAll("\\<.*?\\>", " ")).collect(Collectors.toList());
 		//...and right context
 		List<String> rightCtxRow = kwicLines.get_right();
-		rightCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
-		this.rightContext = rightCtxRow.stream().map(ln -> Jsoup.parse(ln).text()).collect(Collectors.toList());
+		this.rightContext = rightCtxRow.stream()
+				.map(ln -> ln.replaceAll("\\<.*?\\>", " "))
+				.collect(Collectors.toList());
 
 		this.kwic = ContextUtils.strip_tags(kwicLines.get_kwic());
 		this.pos = kwicLines.get_pos();
@@ -48,9 +47,9 @@ public class KWICLine {
 			return false;
 		}
 		KWICLine kwicLine = (KWICLine) o;
-		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext()
-				.equals(kwicLine.getLeftContext()) && this.getKwic()
-				.equals(kwicLine.getKwic()) && this.getRightContext().equals(kwicLine.getRightContext());
+		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext().equals(kwicLine.getLeftContext())
+				&& this.getKwic().equals(kwicLine.getKwic()) && this.getRightContext()
+				.equals(kwicLine.getRightContext());
 	}
 
 	public String getKwic() {
