@@ -27,14 +27,14 @@ public class KWICLine {
 		this.ref = kwicLines.get_refs();
 		//Remove HTML tag from left...
 		List<String> leftCtxRow = kwicLines.get_left();
-		this.leftContext = leftCtxRow.stream().map(ln -> ln.replaceAll("\\<.*?\\>", " ")).collect(Collectors.toList());
+		this.leftContext = leftCtxRow.stream().map(ln -> ContextUtils.removeHtmlTags(ln)).collect(Collectors.toList());
 		//...and right context
 		List<String> rightCtxRow = kwicLines.get_right();
 		this.rightContext = rightCtxRow.stream()
-				.map(ln -> ln.replaceAll("\\<.*?\\>", " "))
+				.map(ln -> ContextUtils.removeHtmlTags(ln))
 				.collect(Collectors.toList());
 
-		this.kwic = ContextUtils.strip_tags(kwicLines.get_kwic());
+		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()));
 		this.pos = kwicLines.get_pos();
 	}
 
