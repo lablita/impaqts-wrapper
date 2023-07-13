@@ -17,9 +17,14 @@ public class ContextUtils {
 
 	public static String removeContextTags(String s) {
 		int position = s.lastIndexOf(TAGS_IN_CONTEXT);
-		StringBuilder builder = new StringBuilder();
-		builder.append(s.substring(0, position));
-		builder.append(s.substring(position + TAGS_IN_CONTEXT.length(), s.length()));
-		return builder.toString();
+		String builder = s.substring(0, position) + s.substring(position + TAGS_IN_CONTEXT.length());
+		return builder;
+	}
+
+	public static String removeHtmlTags(String s) {
+		if (s != null && !s.isEmpty()) {
+			return s.replaceAll("\\<.*?\\>", " ");
+		}
+		return s;
 	}
 }

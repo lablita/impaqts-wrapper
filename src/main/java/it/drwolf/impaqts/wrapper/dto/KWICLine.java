@@ -5,6 +5,7 @@ import it.drwolf.impaqts.wrapper.utils.ContextUtils;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class KWICLine {
 	private String ref;
@@ -24,9 +25,16 @@ public class KWICLine {
 
 	public KWICLine(KWICLines kwicLines) {
 		this.ref = kwicLines.get_refs();
-		this.leftContext = kwicLines.get_left();
-		this.rightContext = kwicLines.get_right();
-		this.kwic = ContextUtils.strip_tags(kwicLines.get_kwic());
+		//Remove HTML tag from left...
+		List<String> leftCtxRow = kwicLines.get_left();
+		this.leftContext = leftCtxRow.stream().map(ln -> ContextUtils.removeHtmlTags(ln)).collect(Collectors.toList());
+		//...and right context
+		List<String> rightCtxRow = kwicLines.get_right();
+		this.rightContext = rightCtxRow.stream()
+				.map(ln -> ContextUtils.removeHtmlTags(ln))
+				.collect(Collectors.toList());
+
+		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()));
 		this.pos = kwicLines.get_pos();
 	}
 
@@ -53,7 +61,7 @@ public class KWICLine {
 	}
 
 	public Long getPos() {
-		return pos;
+		return this.pos;
 	}
 
 	public String getRef() {
@@ -65,11 +73,11 @@ public class KWICLine {
 	}
 
 	public String getStartTime() {
-		return startTime;
+		return this.startTime;
 	}
 
 	public String getVideoUrl() {
-		return videoUrl;
+		return this.videoUrl;
 	}
 
 	@Override
