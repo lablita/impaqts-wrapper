@@ -23,7 +23,7 @@ public class ContextUtils {
 
 	public static String removeHtmlTags(String s) {
 		if (s != null && !s.isEmpty()) {
-			return s.replaceAll("\\<.*?\\>", " ");
+			return s.replaceAll("\\<.*?\\>", "");
 		}
 		return s;
 	}
