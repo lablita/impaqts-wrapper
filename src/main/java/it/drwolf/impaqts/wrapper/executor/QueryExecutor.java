@@ -825,6 +825,13 @@ public class QueryExecutor {
 
 			}
 		} catch (Exception e) {
+			if (e instanceof RuntimeException) {
+				if (e.getMessage() != null && e.getMessage().contains("syntax")) {
+					String errorString = "*** ERROR " + e.getMessage() + "\n";
+					System.out.println(errorString);
+					return;
+				}
+			}
 			e.printStackTrace();
 			throw e;
 		}
