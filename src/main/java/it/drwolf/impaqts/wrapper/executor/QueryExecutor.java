@@ -668,7 +668,8 @@ public class QueryExecutor {
 			}
 		}
 		WordListResponse wordListResponse = new WordListResponse();
-		wordListResponse.getItems().addAll(listItem.subList(start, end));
+		Integer safeEnd = Math.min(end, listItem.size());
+		wordListResponse.getItems().addAll(listItem.subList(start, safeEnd));
 		wordListResponse.setTotalItems(listItem.size());
 		wordListResponse.setTotalFreqs(listItem.stream().mapToLong(i -> i.getFrequency()).sum());
 		wordListResponse.setSearchAttribute(searchAttribute);
