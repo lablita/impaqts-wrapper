@@ -241,8 +241,7 @@ public class QueryExecutor {
 
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		Thread.sleep(50);
-		while (!concordance.finished()
-				|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
+		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
 			this.executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
 					withContextConcordance, withConcordanceFilter);
 		}
@@ -268,8 +267,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			try (Stream<Path> cachePaths = Files.list(cachePath)) {
 				Optional<Path> pathWordOptional = cachePaths.filter(
 						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
@@ -280,8 +279,7 @@ public class QueryExecutor {
 					// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
 					concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 					long now = System.currentTimeMillis();
-					while (!concordance.finished()
-							|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+					while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 						Thread.sleep(5);
 					}
 					concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
@@ -559,8 +557,8 @@ public class QueryExecutor {
 			queryResponse.getDescResponses().add(descResponse);
 		}
 		List<KWICLine> kwicLines = new ArrayList<>();
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
-				"up,g,err,corr", "doc", 100);
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word,lemma,tag",
+				"word,lemma,tag", "up,g,err,corr", "doc", 100);
 		count = concordance.size();
 		Integer maxLine = requestedSize;
 		if (maxLine > count) {
@@ -802,8 +800,8 @@ public class QueryExecutor {
 					this.executeQueryPNFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
-					if (queryRequest.getWideContextRequest() != null
-							&& queryRequest.getWideContextRequest().getPos() != null) {
+					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
+							.getPos() != null) {
 						this.executeWideContextQuery(queryRequest);
 					}
 					break;
@@ -984,8 +982,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0
-					&& frequencyQueryRequest.getCategory().contains(".")) {
+			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0 && frequencyQueryRequest.getCategory()
+					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(frequencyQueryRequest.getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
@@ -1010,8 +1008,7 @@ public class QueryExecutor {
 			}
 		}
 		//Include Categories With No Hits
-		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null
-				&& frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
+		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null && frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
 				.equals(0)) {
 			PosAttr posAttr = corpus.get_attr(frequencyQueryRequest.getCategory());
 
