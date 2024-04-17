@@ -4,13 +4,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ViewOptionRequest {
-	private List<String> attributes = new ArrayList<>();
+	private List<String> attributesKwic = new ArrayList<>();
 
-	public List<String> getAttributes() {
-		return attributes;
+	private List<String> attributesCtx = new ArrayList<>();
+
+	public List<String> getAttributesCtx() {
+		return attributesCtx;
 	}
 
-	public void setAttributes(List<String> attributes) {
-		this.attributes = attributes;
+	public List<String> getAttributesKwic() {
+		return attributesKwic;
+	}
+
+	public void setAttributesCtx(List<String> attributesCtx) {
+		this.attributesCtx = attributesCtx;
+	}
+
+	public void setAttributesKwic(List<String> attributesKwic) {
+		this.attributesKwic = attributesKwic;
 	}
 }

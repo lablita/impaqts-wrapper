@@ -381,6 +381,14 @@ public class QueryExecutor {
 		int count = 0;
 		int requestedSize = end - start;
 		long now = System.currentTimeMillis();
+		final String kwica = queryRequest.getViewOptionRequest()
+				.getAttributesKwic()
+				.stream()
+				.collect(Collectors.joining(","));
+		final String ctxa = queryRequest.getViewOptionRequest()
+				.getAttributesCtx()
+				.stream()
+				.collect(Collectors.joining(","));
 		List<KWICLine> sentKwicLines = new ArrayList<>();
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
@@ -413,7 +421,7 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", kwica, ctxa,
 				"up,g,err,corr", "doc", 100);
 		for (int linenum = 0; linenum < maxLine; linenum++) {
 			if (!kl.nextline()) {
@@ -445,6 +453,14 @@ public class QueryExecutor {
 		final String query = String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord());
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
+		final String kwica = queryRequest.getViewOptionRequest()
+				.getAttributesKwic()
+				.stream()
+				.collect(Collectors.joining(","));
+		final String ctxa = queryRequest.getViewOptionRequest()
+				.getAttributesCtx()
+				.stream()
+				.collect(Collectors.joining(","));
 		final Concordance concordance = new Concordance(corpus, query, 10000000, -1);
 
 		StrVector vals = new StrVector();
@@ -510,7 +526,7 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		KWICLines kl = new KWICLines(corpus, concordance.RS(true, start, end), "40#", "40#", "word,tag,lemma", "word",
+		KWICLines kl = new KWICLines(corpus, concordance.RS(true, start, end), "40#", "40#", kwica, ctxa,
 				"p,g,err,corr", "=doc.sito,=doc.categoria");
 		for (int linenum = 0; linenum < maxLine; linenum++) {
 			if (!kl.nextline()) {
@@ -546,6 +562,14 @@ public class QueryExecutor {
 		int count;
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setId(queryRequest.getId());
+		final String kwica = queryRequest.getViewOptionRequest()
+				.getAttributesKwic()
+				.stream()
+				.collect(Collectors.joining(","));
+		final String ctxa = queryRequest.getViewOptionRequest()
+				.getAttributesCtx()
+				.stream()
+				.collect(Collectors.joining(","));
 
 		if (withContextConcordance) {
 			List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
@@ -557,8 +581,8 @@ public class QueryExecutor {
 			queryResponse.getDescResponses().add(descResponse);
 		}
 		List<KWICLine> kwicLines = new ArrayList<>();
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word,lemma,tag",
-				"word,lemma,tag", "up,g,err,corr", "doc", 100);
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", kwica, ctxa,
+				"up,g,err,corr", "doc", 100);
 		count = concordance.size();
 		Integer maxLine = requestedSize;
 		if (maxLine > count) {
