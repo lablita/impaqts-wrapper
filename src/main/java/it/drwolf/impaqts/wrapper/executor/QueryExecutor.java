@@ -241,8 +241,7 @@ public class QueryExecutor {
 
 		concordance.load_from_query(corpus, cql, 0, 0); // il cql finale al posto di qr-getWord()
 		Thread.sleep(50);
-		while (!concordance.finished()
-				|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
+		while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME + 200) {
 			this.executeQueryStep(queryRequest, corpus, start, end, concordance, requestedSize, now, sentKwicLines,
 					withContextConcordance, withConcordanceFilter);
 		}
@@ -268,8 +267,8 @@ public class QueryExecutor {
 			if (!Files.exists(cachePath)) {
 				Files.createDirectory(cachePath);
 			}
-			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+			String fileWordConcordance = queryTag.getName() + "_" + queryTag.getValue()
+					.replace(" ", "_") + QueryExecutor.EXT_CONC;
 			try (Stream<Path> cachePaths = Files.list(cachePath)) {
 				Optional<Path> pathWordOptional = cachePaths.filter(
 						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
@@ -280,8 +279,7 @@ public class QueryExecutor {
 					// al posto di phrase su corpora.dipertimentodieccellenza, stessi risultati
 					concordance.load_from_query(corpus, this.getCqlFromQueryRequest(queryRequest), 10000000, 0);
 					long now = System.currentTimeMillis();
-					while (!concordance.finished()
-							|| (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
+					while (!concordance.finished() || (System.currentTimeMillis() - now) < QueryExecutor.MINIMUM_EXECUTION_TIME) {
 						Thread.sleep(5);
 					}
 					concordance.save(this.cacheDir + corpusName + "/" + fileWordConcordance);
@@ -383,6 +381,14 @@ public class QueryExecutor {
 		int count = 0;
 		int requestedSize = end - start;
 		long now = System.currentTimeMillis();
+		final String kwica = queryRequest.getViewOptionRequest()
+				.getAttributesKwic()
+				.stream()
+				.collect(Collectors.joining(","));
+		final String ctxa = queryRequest.getViewOptionRequest()
+				.getAttributesCtx()
+				.stream()
+				.collect(Collectors.joining(","));
 		List<KWICLine> sentKwicLines = new ArrayList<>();
 		// è possibile che durante le istruzioni del ciclo while non siano pronti i risultati,
 		// ma che la concordance sia marcata come finished sull'ultima istruzione. Per questo imponiamo
@@ -415,7 +421,7 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", kwica, ctxa,
 				"up,g,err,corr", "doc", 100);
 		for (int linenum = 0; linenum < maxLine; linenum++) {
 			if (!kl.nextline()) {
@@ -447,6 +453,14 @@ public class QueryExecutor {
 		final String query = String.format(this.getCqlFromQueryRequest(queryRequest), queryRequest.getWord());
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
+		final String kwica = queryRequest.getViewOptionRequest()
+				.getAttributesKwic()
+				.stream()
+				.collect(Collectors.joining(","));
+		final String ctxa = queryRequest.getViewOptionRequest()
+				.getAttributesCtx()
+				.stream()
+				.collect(Collectors.joining(","));
 		final Concordance concordance = new Concordance(corpus, query, 10000000, -1);
 
 		StrVector vals = new StrVector();
@@ -512,7 +526,7 @@ public class QueryExecutor {
 		if (maxLine > count) {
 			maxLine = count;
 		}
-		KWICLines kl = new KWICLines(corpus, concordance.RS(true, start, end), "40#", "40#", "word,tag,lemma", "word",
+		KWICLines kl = new KWICLines(corpus, concordance.RS(true, start, end), "40#", "40#", kwica, ctxa,
 				"p,g,err,corr", "=doc.sito,=doc.categoria");
 		for (int linenum = 0; linenum < maxLine; linenum++) {
 			if (!kl.nextline()) {
@@ -548,6 +562,14 @@ public class QueryExecutor {
 		int count;
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setId(queryRequest.getId());
+		final String kwica = queryRequest.getViewOptionRequest()
+				.getAttributesKwic()
+				.stream()
+				.collect(Collectors.joining(","));
+		final String ctxa = queryRequest.getViewOptionRequest()
+				.getAttributesCtx()
+				.stream()
+				.collect(Collectors.joining(","));
 
 		if (withContextConcordance) {
 			List<DescResponse> descResponses = this.contextConcordance(concordance, queryRequest);
@@ -559,7 +581,7 @@ public class QueryExecutor {
 			queryResponse.getDescResponses().add(descResponse);
 		}
 		List<KWICLine> kwicLines = new ArrayList<>();
-		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", "word", "word",
+		KWICLines kl = new KWICLines(corpus, concordance.RS(false, start, end), "50#", "50#", kwica, ctxa,
 				"up,g,err,corr", "doc", 100);
 		count = concordance.size();
 		Integer maxLine = requestedSize;
@@ -802,8 +824,8 @@ public class QueryExecutor {
 					this.executeQueryPNFrequencyConcordance(corpus, queryRequest);
 					break;
 				case WIDE_CONTEXT_QUERY_REQUEST:
-					if (queryRequest.getWideContextRequest() != null
-							&& queryRequest.getWideContextRequest().getPos() != null) {
+					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
+							.getPos() != null) {
 						this.executeWideContextQuery(queryRequest);
 					}
 					break;
@@ -984,8 +1006,8 @@ public class QueryExecutor {
 					frlList.add(frl);
 				}
 			}
-			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0
-					&& frequencyQueryRequest.getCategory().contains(".")) {
+			if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() && freqLimit == 0 && frequencyQueryRequest.getCategory()
+					.contains(".")) {
 				List<String> allVals = new ArrayList<>();
 				PosAttr attr = corpus.get_attr(frequencyQueryRequest.getCategory());
 				for (int i = 0; i < attr.id_range(); i++) {
@@ -1010,8 +1032,7 @@ public class QueryExecutor {
 			}
 		}
 		//Include Categories With No Hits
-		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null
-				&& frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
+		if (frequencyQueryRequest.getIncludeCategoriesWithNoHits() != null && frequencyQueryRequest.getIncludeCategoriesWithNoHits() && frequencyQueryRequest.getFrequencyLimit()
 				.equals(0)) {
 			PosAttr posAttr = corpus.get_attr(frequencyQueryRequest.getCategory());
 
