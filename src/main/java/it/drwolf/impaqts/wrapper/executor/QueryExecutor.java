@@ -613,35 +613,21 @@ public class QueryExecutor {
 
 	private void executeReferencePositiontQuery(QueryRequest queryRequest) throws JsonProcessingException {
 		final ReferencePositionRequest referencePositionRequest = queryRequest.getReferencePositionRequest();
-		System.out.printf("### 1. Reference position: %s %d", referencePositionRequest.getCorpusName(),
+		System.out.printf("### 1. Reference position: %s %d%n", referencePositionRequest.getCorpusName(),
 				referencePositionRequest.getPos());
 		final Corpus corpus = new Corpus(referencePositionRequest.getCorpusName());
 		final Long pos = referencePositionRequest.getPos();
-
 		String[] fullRefs = corpus.get_conf("FULLREF").split(",");
 		String docStructure = corpus.get_conf("DOCSTRUCTURE");
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.getReferencePositionResponse().setTokenNumber(pos);
-		//queryResponse.getReferencePositionResponse().setDocumentNumber();
+		Long docNumber = corpus.get_struct(docStructure).num_at_pos(pos);
+		queryResponse.getReferencePositionResponse().setDocumentNumber(docNumber);
+		Map<String, String> references = queryResponse.getReferencePositionResponse().getReferences();
 		for (String fullRef : fullRefs) {
-			String refs = corpus.get_attr(fullRef).pos2str(pos);
-			System.out.println(refs);
+			String ref = corpus.get_attr(fullRef).pos2str(pos);
+			references.put(fullRef, ref);
 		}
-
-		CorpRegion corpRegion = new CorpRegion(corpus, "word", "p,g,err,corr");
-		StrVector leftRegion = corpRegion.region(pos - 40, pos);
-		//		StrVector kwicRegion = corpRegion.region(pos, pos + hitlen);
-		//		StrVector rightRegion = corpRegion.region(pos + hitlen, pos + hitlen + 40);
-		String leftContext = leftRegion.stream().collect(Collectors.joining(" "));
-		//		String kwicContext = kwicRegion.stream().collect(Collectors.joining(" "));
-		//		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
-		QueryResponse queryResponse = new QueryResponse(queryRequest);
-		queryResponse.getWideContextResponse()
-				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext)));
-		//		queryResponse.getWideContextResponse()
-		//				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext)));
-		//		queryResponse.getWideContextResponse()
-		//				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext)));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		System.out.printf("### 2. Finished Reference position: %s %d", referencePositionRequest.getCorpusName(),
