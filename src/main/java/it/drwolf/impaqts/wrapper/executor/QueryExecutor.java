@@ -25,6 +25,7 @@ import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLineDTO;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
+import it.drwolf.impaqts.wrapper.dto.ReferencePositionRequest;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.dto.TokenClassDTO;
 import it.drwolf.impaqts.wrapper.dto.WideContextRequest;
@@ -610,6 +611,43 @@ public class QueryExecutor {
 				(System.currentTimeMillis() - now), concordance.fullsize());
 	}
 
+	private void executeReferencePositiontQuery(QueryRequest queryRequest) throws JsonProcessingException {
+		final ReferencePositionRequest referencePositionRequest = queryRequest.getReferencePositionRequest();
+		System.out.printf("### 1. Reference position: %s %d", referencePositionRequest.getCorpusName(),
+				referencePositionRequest.getPos());
+		final Corpus corpus = new Corpus(referencePositionRequest.getCorpusName());
+		final Long pos = referencePositionRequest.getPos();
+
+		String[] fullRefs = corpus.get_conf("FULLREF").split(",");
+		String docStructure = corpus.get_conf("DOCSTRUCTURE");
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
+		queryResponse.getReferencePositionResponse().setTokenNumber(pos);
+		//queryResponse.getReferencePositionResponse().setDocumentNumber();
+		for (String fullRef : fullRefs) {
+			String refs = corpus.get_attr(fullRef).pos2str(pos);
+			System.out.println(refs);
+		}
+
+		CorpRegion corpRegion = new CorpRegion(corpus, "word", "p,g,err,corr");
+		StrVector leftRegion = corpRegion.region(pos - 40, pos);
+		//		StrVector kwicRegion = corpRegion.region(pos, pos + hitlen);
+		//		StrVector rightRegion = corpRegion.region(pos + hitlen, pos + hitlen + 40);
+		String leftContext = leftRegion.stream().collect(Collectors.joining(" "));
+		//		String kwicContext = kwicRegion.stream().collect(Collectors.joining(" "));
+		//		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
+		queryResponse.getWideContextResponse()
+				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext)));
+		//		queryResponse.getWideContextResponse()
+		//				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext)));
+		//		queryResponse.getWideContextResponse()
+		//				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext)));
+		queryResponse.setInProgress(false);
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+		System.out.printf("### 2. Finished Reference position: %s %d", referencePositionRequest.getCorpusName(),
+				referencePositionRequest.getPos());
+	}
+
 	private void executeWideContextQuery(QueryRequest queryRequest) throws JsonProcessingException {
 		final WideContextRequest wideContextRequest = queryRequest.getWideContextRequest();
 		System.out.printf("### 1. Wide context: %s %d %d%n", wideContextRequest.getCorpusName(),
@@ -827,6 +865,12 @@ public class QueryExecutor {
 					if (queryRequest.getWideContextRequest() != null && queryRequest.getWideContextRequest()
 							.getPos() != null) {
 						this.executeWideContextQuery(queryRequest);
+					}
+					break;
+				case REFERENCE_POSITION_QUERY_REQUEST:
+					if (queryRequest.getReferencePositionRequest() != null && queryRequest.getReferencePositionRequest()
+							.getPos() != null) {
+						this.executeReferencePositiontQuery(queryRequest);
 					}
 					break;
 				case CORPUS_INFO:
