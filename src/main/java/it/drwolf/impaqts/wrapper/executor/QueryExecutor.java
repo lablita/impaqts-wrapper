@@ -428,7 +428,7 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl);
+			KWICLine kwicLine = new KWICLine(kl, corpus, queryRequest.getImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -533,7 +533,7 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl);
+			KWICLine kwicLine = new KWICLine(kl, corpus, queryRequest.getImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -593,7 +593,7 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl);
+			KWICLine kwicLine = new KWICLine(kl, corpus, queryRequest.getImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -618,16 +618,18 @@ public class QueryExecutor {
 		final Corpus corpus = new Corpus(referencePositionRequest.getCorpusName());
 		final Long pos = referencePositionRequest.getPos();
 		String[] fullRefs = corpus.get_conf("FULLREF").split(",");
-		String docStructure = corpus.get_conf("DOCSTRUCTURE");
-		QueryResponse queryResponse = new QueryResponse(queryRequest);
-		queryResponse.getReferencePositionResponse().setTokenNumber(pos);
-		Long docNumber = corpus.get_struct(docStructure).num_at_pos(pos);
-		queryResponse.getReferencePositionResponse().setDocumentNumber(docNumber);
-		Map<String, String> references = queryResponse.getReferencePositionResponse().getReferences();
+		Map<String, String> references = new HashMap<>();
 		for (String fullRef : fullRefs) {
 			String ref = corpus.get_attr(fullRef).pos2str(pos);
 			references.put(fullRef, ref);
 		}
+
+		String docStructure = corpus.get_conf("DOCSTRUCTURE");
+		Long docNumber = corpus.get_struct(docStructure).num_at_pos(pos);
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
+		queryResponse.getReferencePositionResponse().setTokenNumber(pos);
+		queryResponse.getReferencePositionResponse().setDocumentNumber(docNumber);
+		queryResponse.getReferencePositionResponse().setReferences(references);
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		System.out.printf("### 2. Finished Reference position: %s %d", referencePositionRequest.getCorpusName(),
@@ -650,11 +652,14 @@ public class QueryExecutor {
 		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.getWideContextResponse()
-				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext)));
+				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext),
+						queryRequest.getImpaqts()));
 		queryResponse.getWideContextResponse()
-				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext)));
+				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext),
+						queryRequest.getImpaqts()));
 		queryResponse.getWideContextResponse()
-				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext)));
+				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext),
+						queryRequest.getImpaqts()));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		System.out.printf("### 2. Finished Wide context: %s %d %d%n", wideContextRequest.getCorpusName(),
