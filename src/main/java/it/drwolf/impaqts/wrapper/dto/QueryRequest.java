@@ -24,7 +24,6 @@ public class QueryRequest {
 	private String queryType;
 	private WordListRequest wordListRequest;
 	private ViewOptionRequest viewOptionRequest;
-	private Boolean impaqts;
 
 	public CollocationQueryRequest getCollocationQueryRequest() {
 		return this.collocationQueryRequest;
@@ -64,10 +63,6 @@ public class QueryRequest {
 
 	public String getId() {
 		return this.id;
-	}
-
-	public Boolean getImpaqts() {
-		return impaqts;
 	}
 
 	public boolean getQueryInCql() {
@@ -155,10 +150,6 @@ public class QueryRequest {
 		this.id = id;
 	}
 
-	public void setImpaqts(Boolean impaqts) {
-		this.impaqts = impaqts;
-	}
-
 	public void setQueryInCql(boolean queryInCql) {
 		this.queryInCql = queryInCql;
 	}
@@ -200,7 +191,7 @@ public class QueryRequest {
 	}
 
 	public enum RequestType {
-		VISUAL_QUERY_REQUEST, TEXTUAL_QUERY_REQUEST, CONTEXT_QUERY_REQUEST, COLLOCATION_REQUEST, SORT_REQUEST, MULTI_FREQUENCY_QUERY_REQUEST, METADATA_FREQUENCY_QUERY_REQUEST, PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST, PN_METADATA_FREQ_CONCORDANCE_QUERY_REQUEST, WIDE_CONTEXT_QUERY_REQUEST, CORPUS_INFO, FILTER_CONCORDANCE_QUERY_REQUEST, WORD_LIST_REQUEST, REFERENCE_POSITION_QUERY_REQUEST;
+		VISUAL_QUERY_REQUEST, TEXTUAL_QUERY_REQUEST, CONTEXT_QUERY_REQUEST, COLLOCATION_REQUEST, SORT_REQUEST, MULTI_FREQUENCY_QUERY_REQUEST, METADATA_FREQUENCY_QUERY_REQUEST, PN_MULTI_FREQ_CONCORDANCE_QUERY_REQUEST, PN_METADATA_FREQ_CONCORDANCE_QUERY_REQUEST, WIDE_CONTEXT_QUERY_REQUEST, CORPUS_INFO, FILTER_CONCORDANCE_QUERY_REQUEST, WORD_LIST_REQUEST, REFERENCE_POSITION_QUERY_REQUEST, IMPLICIT_REQUEST;
 
 		public static boolean contain(String dir) {
 			try {

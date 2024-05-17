@@ -428,7 +428,8 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl, corpus, queryRequest.getImpaqts());
+			KWICLine kwicLine = new KWICLine(kl, corpus,
+					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()));
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -533,7 +534,8 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl, corpus, queryRequest.getImpaqts());
+			KWICLine kwicLine = new KWICLine(kl, corpus,
+					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()));
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -593,7 +595,8 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl, corpus, queryRequest.getImpaqts());
+			KWICLine kwicLine = new KWICLine(kl, corpus,
+					QueryRequest.RequestType.IMPLICIT_REQUEST.toString().equals(queryRequest.getQueryType()));
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -653,13 +656,13 @@ public class QueryExecutor {
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.getWideContextResponse()
 				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext),
-						queryRequest.getImpaqts()));
+						QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType())));
 		queryResponse.getWideContextResponse()
 				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext),
-						queryRequest.getImpaqts()));
+						QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType())));
 		queryResponse.getWideContextResponse()
 				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext),
-						queryRequest.getImpaqts()));
+						QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType())));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		System.out.printf("### 2. Finished Wide context: %s %d %d%n", wideContextRequest.getCorpusName(),
@@ -876,6 +879,7 @@ public class QueryExecutor {
 				case VISUAL_QUERY_REQUEST:
 				case TEXTUAL_QUERY_REQUEST:
 				case FILTER_CONCORDANCE_QUERY_REQUEST: // forse non serve
+				case IMPLICIT_REQUEST:
 				default:
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, queryRequest);
