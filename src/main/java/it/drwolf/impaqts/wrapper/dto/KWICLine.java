@@ -27,22 +27,22 @@ public class KWICLine {
 		this.rightContext = rightContext;
 	}
 
-	public KWICLine(KWICLines kwicLines, Corpus corpus, boolean implicitRequest) {
+	public KWICLine(KWICLines kwicLines, Corpus corpus, boolean impaqts) {
 		this.ref = kwicLines.get_refs();
 		//Remove HTML tag from left...
 		List<String> leftCtxRow = kwicLines.get_left();
 		this.leftContext = leftCtxRow.stream()
-				.map(ln -> ContextUtils.removeHtmlTags(ln, implicitRequest))
+				.map(ln -> ContextUtils.removeHtmlTags(ln, impaqts))
 				.collect(Collectors.toList());
 		//...and right context
 		List<String> rightCtxRow = kwicLines.get_right();
 		this.rightContext = rightCtxRow.stream()
-				.map(ln -> ContextUtils.removeHtmlTags(ln, implicitRequest))
+				.map(ln -> ContextUtils.removeHtmlTags(ln, impaqts))
 				.collect(Collectors.toList());
 
-		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()), implicitRequest);
+		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()), impaqts);
 		this.pos = kwicLines.get_pos();
-		if (implicitRequest) {
+		if (impaqts) {
 			String[] fullRefs = corpus.get_conf("FULLREF").split(",");
 			for (String fullRef : fullRefs) {
 				String ref = corpus.get_attr(fullRef).pos2str(pos);
