@@ -25,6 +25,7 @@ import it.drwolf.impaqts.wrapper.dto.KWICLine;
 import it.drwolf.impaqts.wrapper.dto.KWICLineDTO;
 import it.drwolf.impaqts.wrapper.dto.QueryRequest;
 import it.drwolf.impaqts.wrapper.dto.QueryResponse;
+import it.drwolf.impaqts.wrapper.dto.ReferencePositionRequest;
 import it.drwolf.impaqts.wrapper.dto.SortOption;
 import it.drwolf.impaqts.wrapper.dto.TokenClassDTO;
 import it.drwolf.impaqts.wrapper.dto.WideContextRequest;
@@ -427,7 +428,9 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl);
+			KWICLine kwicLine = new KWICLine(kl, corpus,
+					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()),
+					queryRequest.isImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -532,7 +535,9 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl);
+			KWICLine kwicLine = new KWICLine(kl, corpus,
+					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()),
+					queryRequest.isImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -592,7 +597,9 @@ public class QueryExecutor {
 			if (!kl.nextline()) {
 				break;
 			}
-			KWICLine kwicLine = new KWICLine(kl);
+			KWICLine kwicLine = new KWICLine(kl, corpus,
+					QueryRequest.RequestType.IMPLICIT_REQUEST.toString().equals(queryRequest.getQueryType()),
+					queryRequest.isImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -608,6 +615,31 @@ public class QueryExecutor {
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse)); //scrive il risultato in JSON
 		System.out.printf("### 2. Finished: %s\t Time: %d\t Size: %d%n", concordance.finished(),
 				(System.currentTimeMillis() - now), concordance.fullsize());
+	}
+
+	private void executeReferencePositiontQuery(QueryRequest queryRequest) throws JsonProcessingException {
+		final ReferencePositionRequest referencePositionRequest = queryRequest.getReferencePositionRequest();
+		System.out.printf("### 1. Reference position: %s %d%n", referencePositionRequest.getCorpusName(),
+				referencePositionRequest.getPos());
+		final Corpus corpus = new Corpus(referencePositionRequest.getCorpusName());
+		final Long pos = referencePositionRequest.getPos();
+		String[] fullRefs = corpus.get_conf("FULLREF").split(",");
+		Map<String, String> references = new HashMap<>();
+		for (String fullRef : fullRefs) {
+			String ref = corpus.get_attr(fullRef).pos2str(pos);
+			references.put(fullRef, ref);
+		}
+
+		String docStructure = corpus.get_conf("DOCSTRUCTURE");
+		Long docNumber = corpus.get_struct(docStructure).num_at_pos(pos);
+		QueryResponse queryResponse = new QueryResponse(queryRequest);
+		queryResponse.getReferencePositionResponse().setTokenNumber(pos);
+		queryResponse.getReferencePositionResponse().setDocumentNumber(docNumber);
+		queryResponse.getReferencePositionResponse().setReferences(references);
+		queryResponse.setInProgress(false);
+		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
+		System.out.printf("### 2. Finished Reference position: %s %d", referencePositionRequest.getCorpusName(),
+				referencePositionRequest.getPos());
 	}
 
 	private void executeWideContextQuery(QueryRequest queryRequest) throws JsonProcessingException {
@@ -626,11 +658,14 @@ public class QueryExecutor {
 		String rightContext = rightRegion.stream().collect(Collectors.joining(" "));
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.getWideContextResponse()
-				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext)));
+				.setLeftContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(leftContext),
+						QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType())));
 		queryResponse.getWideContextResponse()
-				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext)));
+				.setKwic(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(kwicContext),
+						QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType())));
 		queryResponse.getWideContextResponse()
-				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext)));
+				.setRightContext(ContextUtils.removeHtmlTags(ContextUtils.removeContextTags(rightContext),
+						QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType())));
 		queryResponse.setInProgress(false);
 		System.out.println(this.objectMapper.writeValueAsString(queryResponse));
 		System.out.printf("### 2. Finished Wide context: %s %d %d%n", wideContextRequest.getCorpusName(),
@@ -829,6 +864,12 @@ public class QueryExecutor {
 						this.executeWideContextQuery(queryRequest);
 					}
 					break;
+				case REFERENCE_POSITION_QUERY_REQUEST:
+					if (queryRequest.getReferencePositionRequest() != null && queryRequest.getReferencePositionRequest()
+							.getPos() != null) {
+						this.executeReferencePositiontQuery(queryRequest);
+					}
+					break;
 				case CORPUS_INFO:
 					if (corpus != null && !corpus.isEmpty()) {
 						this.getCorpusInfo(queryRequest);
@@ -841,6 +882,7 @@ public class QueryExecutor {
 				case VISUAL_QUERY_REQUEST:
 				case TEXTUAL_QUERY_REQUEST:
 				case FILTER_CONCORDANCE_QUERY_REQUEST: // forse non serve
+				case IMPLICIT_REQUEST:
 				default:
 					System.out.println("*** CQL *** " + this.getCqlFromQueryRequest(queryRequest)); //debug
 					this.executeQuery(corpus, queryRequest);

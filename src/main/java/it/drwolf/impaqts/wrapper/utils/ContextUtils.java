@@ -5,6 +5,10 @@ import com.sketchengine.manatee.StrVector;
 public class ContextUtils {
 
 	private final static String TAGS_IN_CONTEXT = "{}";
+	private final static String IMPL = "impl";
+	private final static String PPP = "ppp";
+	private final static String VAG = "vag";
+	private final static String TOP = "top";
 
 	public static String strip_tags(StrVector tokens) {
 		String ret = "";
@@ -21,10 +25,11 @@ public class ContextUtils {
 		return builder;
 	}
 
-	public static String removeHtmlTags(String s) {
+	public static String removeHtmlTags(String s, Boolean impaqts) {
 		if (s != null && !s.isEmpty()) {
 			return s.replaceAll("\\<.*?\\>", "");
 		}
 		return s;
 	}
 }
+

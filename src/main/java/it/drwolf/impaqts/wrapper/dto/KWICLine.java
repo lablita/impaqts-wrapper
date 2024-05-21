@@ -1,9 +1,12 @@
 package it.drwolf.impaqts.wrapper.dto;
 
+import com.sketchengine.manatee.Corpus;
 import com.sketchengine.manatee.KWICLines;
 import it.drwolf.impaqts.wrapper.utils.ContextUtils;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -13,8 +16,10 @@ public class KWICLine {
 	private String kwic;
 	private List<String> rightContext;
 	private Long pos;
+	private Long docNumber;
 	private String startTime;
 	private String videoUrl;
+	private Map<String, String> references = new HashMap<>();
 
 	public KWICLine(String ref, List<String> leftContext, String kwic, List<String> rightContext) {
 		this.ref = ref;
@@ -23,19 +28,29 @@ public class KWICLine {
 		this.rightContext = rightContext;
 	}
 
-	public KWICLine(KWICLines kwicLines) {
+	public KWICLine(KWICLines kwicLines, Corpus corpus, boolean implicitRequest, boolean impaqts) {
 		this.ref = kwicLines.get_refs();
 		//Remove HTML tag from left...
 		List<String> leftCtxRow = kwicLines.get_left();
-		this.leftContext = leftCtxRow.stream().map(ln -> ContextUtils.removeHtmlTags(ln)).collect(Collectors.toList());
+		this.leftContext = leftCtxRow.stream()
+				.map(ln -> ContextUtils.removeHtmlTags(ln, impaqts))
+				.collect(Collectors.toList());
 		//...and right context
 		List<String> rightCtxRow = kwicLines.get_right();
 		this.rightContext = rightCtxRow.stream()
-				.map(ln -> ContextUtils.removeHtmlTags(ln))
+				.map(ln -> ContextUtils.removeHtmlTags(ln, impaqts))
 				.collect(Collectors.toList());
 
-		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()));
+		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()), impaqts);
 		this.pos = kwicLines.get_pos();
+		this.docNumber = corpus.get_struct(corpus.get_conf("DOCSTRUCTURE")).num_at_pos(pos);
+		if (impaqts) {
+			String[] fullRefs = corpus.get_conf("FULLREF").split(",");
+			for (String fullRef : fullRefs) {
+				String ref = corpus.get_attr(fullRef).pos2str(pos);
+				this.references.put(fullRef, ref);
+			}
+		}
 	}
 
 	@Override
@@ -47,9 +62,13 @@ public class KWICLine {
 			return false;
 		}
 		KWICLine kwicLine = (KWICLine) o;
-		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext().equals(kwicLine.getLeftContext())
-				&& this.getKwic().equals(kwicLine.getKwic()) && this.getRightContext()
-				.equals(kwicLine.getRightContext());
+		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext()
+				.equals(kwicLine.getLeftContext()) && this.getKwic()
+				.equals(kwicLine.getKwic()) && this.getRightContext().equals(kwicLine.getRightContext());
+	}
+
+	public Long getDocNumber() {
+		return docNumber;
 	}
 
 	public String getKwic() {
@@ -66,6 +85,10 @@ public class KWICLine {
 
 	public String getRef() {
 		return this.ref;
+	}
+
+	public Map<String, String> getReferences() {
+		return references;
 	}
 
 	public List<String> getRightContext() {
@@ -85,6 +108,10 @@ public class KWICLine {
 		return Objects.hash(this.getRef(), this.getLeftContext(), this.getKwic(), this.getRightContext());
 	}
 
+	public void setDocNumber(Long docNumber) {
+		this.docNumber = docNumber;
+	}
+
 	public void setKwic(String kwic) {
 		this.kwic = kwic;
 	}
@@ -99,6 +126,10 @@ public class KWICLine {
 
 	public void setRef(String ref) {
 		this.ref = ref;
+	}
+
+	public void setReferences(Map<String, String> references) {
+		this.references = references;
 	}
 
 	public void setRightContext(List<String> rightContext) {
