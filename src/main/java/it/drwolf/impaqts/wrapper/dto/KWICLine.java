@@ -16,6 +16,7 @@ public class KWICLine {
 	private String kwic;
 	private List<String> rightContext;
 	private Long pos;
+	private Long docNumber;
 	private String startTime;
 	private String videoUrl;
 	private Map<String, String> references = new HashMap<>();
@@ -27,7 +28,7 @@ public class KWICLine {
 		this.rightContext = rightContext;
 	}
 
-	public KWICLine(KWICLines kwicLines, Corpus corpus, boolean impaqts) {
+	public KWICLine(KWICLines kwicLines, Corpus corpus, boolean implicitRequest, boolean impaqts) {
 		this.ref = kwicLines.get_refs();
 		//Remove HTML tag from left...
 		List<String> leftCtxRow = kwicLines.get_left();
@@ -42,6 +43,7 @@ public class KWICLine {
 
 		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()), impaqts);
 		this.pos = kwicLines.get_pos();
+		this.docNumber = corpus.get_struct(corpus.get_conf("DOCSTRUCTURE")).num_at_pos(pos);
 		if (impaqts) {
 			String[] fullRefs = corpus.get_conf("FULLREF").split(",");
 			for (String fullRef : fullRefs) {
@@ -63,6 +65,10 @@ public class KWICLine {
 		return this.getRef().equals(kwicLine.getRef()) && this.getLeftContext()
 				.equals(kwicLine.getLeftContext()) && this.getKwic()
 				.equals(kwicLine.getKwic()) && this.getRightContext().equals(kwicLine.getRightContext());
+	}
+
+	public Long getDocNumber() {
+		return docNumber;
 	}
 
 	public String getKwic() {
@@ -100,6 +106,10 @@ public class KWICLine {
 	@Override
 	public int hashCode() {
 		return Objects.hash(this.getRef(), this.getLeftContext(), this.getKwic(), this.getRightContext());
+	}
+
+	public void setDocNumber(Long docNumber) {
+		this.docNumber = docNumber;
 	}
 
 	public void setKwic(String kwic) {

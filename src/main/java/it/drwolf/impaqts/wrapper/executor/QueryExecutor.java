@@ -429,7 +429,8 @@ public class QueryExecutor {
 				break;
 			}
 			KWICLine kwicLine = new KWICLine(kl, corpus,
-					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()));
+					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()),
+					queryRequest.isImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -535,7 +536,8 @@ public class QueryExecutor {
 				break;
 			}
 			KWICLine kwicLine = new KWICLine(kl, corpus,
-					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()));
+					QueryRequest.RequestType.IMPLICIT_REQUEST.equals(queryRequest.getQueryType()),
+					queryRequest.isImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
@@ -596,7 +598,8 @@ public class QueryExecutor {
 				break;
 			}
 			KWICLine kwicLine = new KWICLine(kl, corpus,
-					QueryRequest.RequestType.IMPLICIT_REQUEST.toString().equals(queryRequest.getQueryType()));
+					QueryRequest.RequestType.IMPLICIT_REQUEST.toString().equals(queryRequest.getQueryType()),
+					queryRequest.isImpaqts());
 			kwicLine.setStartTime(this.retrieveStartTime(kwicLine.getPos(), corpus));
 			kwicLine.setVideoUrl(this.retrieveVideoUrl(kwicLine.getPos(), corpus));
 			kwicLines.add(kwicLine);
