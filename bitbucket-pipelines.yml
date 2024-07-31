@@ -9,13 +9,6 @@ image: maven:3-amazoncorretto-11
 
 pipelines:
   branches:
-    develop:
-      - step:
-          name: Sonar
-          caches:
-            - maven
-          script:
-            - mvn compile sonar:sonar -Dsonar.host.url=https://sonar.drwolf.it -Dsonar.login=8d70216bd83bfc0185fcd8bb2c0e4dd92b3f0c57
     master:
       - step:
           name: Deploy to production
