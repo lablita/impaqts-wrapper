@@ -271,7 +271,8 @@ public class QueryExecutor {
 				Files.createDirectory(cachePath);
 			}
 			String fileWordConcordance =
-					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_") + QueryExecutor.EXT_CONC;
+					queryTag.getName() + "_" + queryTag.getValue().replace(" ", "_").replace("/", "_")
+							+ QueryExecutor.EXT_CONC;
 			try (Stream<Path> cachePaths = Files.list(cachePath)) {
 				Optional<Path> pathWordOptional = cachePaths.filter(
 						file -> file.getFileName().toString().contains(fileWordConcordance)).findFirst();
