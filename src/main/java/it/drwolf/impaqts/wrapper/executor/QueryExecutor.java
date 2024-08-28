@@ -350,14 +350,19 @@ public class QueryExecutor {
 		}
 	}
 
-	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest) throws IOException {
+	private void executeQueryFrequency(String corpusName, QueryRequest queryRequest)
+			throws IOException, InterruptedException {
 		final Corpus corpus = new Corpus(corpusName);
 		final String cql = this.getCqlFromQueryRequest(queryRequest);
 		final int start = queryRequest.getStart();
 		final int end = queryRequest.getEnd();
 		final Concordance concordance = new Concordance();
 		concordance.load_from_query(corpus, cql, QueryExecutor.SAMPLE_SIZE, QueryExecutor.FULL_SIZE);
-
+		int whileCount = 1;
+		while (!concordance.finished()) {
+			Thread.sleep(50);
+			System.out.printf("### WHILE %d%n", whileCount++);
+		}
 		int count = concordance.size();
 		QueryResponse queryResponse = new QueryResponse(queryRequest);
 		queryResponse.setCurrentSize(count);
