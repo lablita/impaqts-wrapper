@@ -65,8 +65,13 @@ public class KWICLine {
 		if (impaqts) {
 			String[] fullRefs = corpus.get_conf("FULLREF").split(",");
 			for (String fullRef : fullRefs) {
-				String ref = corpus.get_attr(fullRef).pos2str(pos);
-				this.references.put(fullRef, ref);
+				try {
+					String ref = corpus.get_attr(fullRef).pos2str(pos);
+					this.references.put(fullRef, ref);
+				} catch (Throwable fae) {
+					// File Access Error
+					System.out.printf("### Error accessing corpus for fullRef: " + fullRef);
+				}
 			}
 		}
 	}
