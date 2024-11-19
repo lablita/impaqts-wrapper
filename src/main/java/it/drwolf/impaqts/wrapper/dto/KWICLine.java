@@ -62,18 +62,18 @@ public class KWICLine {
 		this.kwic = ContextUtils.removeHtmlTags(ContextUtils.strip_tags(kwicLines.get_kwic()), impaqts);
 		this.pos = kwicLines.get_pos();
 		this.docNumber = corpus.get_struct(corpus.get_conf("DOCSTRUCTURE")).num_at_pos(pos);
-		if (impaqts) {
-			String[] fullRefs = corpus.get_conf("FULLREF").split(",");
-			for (String fullRef : fullRefs) {
-				try {
-					String ref = corpus.get_attr(fullRef).pos2str(pos);
-					this.references.put(fullRef, ref);
-				} catch (Throwable fae) {
-					// File Access Error
-					System.out.printf("### Error accessing corpus for fullRef: " + fullRef);
-				}
-			}
-		}
+//		if (impaqts) {
+//			String[] fullRefs = corpus.get_conf("FULLREF").split(",");
+//			for (String fullRef : fullRefs) {
+//				try {
+//					String ref = corpus.get_attr(fullRef).pos2str(pos);
+//					this.references.put(fullRef, ref);
+//				} catch (Throwable fae) {
+//					// File Access Error
+//					System.out.printf("### Error accessing corpus for fullRef: " + fullRef);
+//				}
+//			}
+//		}
 	}
 
 	@Override
